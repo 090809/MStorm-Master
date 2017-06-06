@@ -179,7 +179,7 @@ public:
 			if (AuraEffect* protEff = eventInfo.GetProcTarget()->GetAuraEffect(SPELL_PROTECTION_OF_ANCIENT_KINGS, 0, eventInfo.GetActor()->GetGUID()))
 			{
 				// The shield can grow to a maximum size of 20,000 damage absorbtion
-				protEff->SetAmount(std::min<int32>(protEff->GetAmount() + absorb, 20000));
+				protEff->SetAmount(protEff->GetAmount() + absorb);
 
 				// Refresh and return to prevent replacing the aura
 				protEff->GetBase()->RefreshDuration();
@@ -467,6 +467,7 @@ public:
 				break;
 			case CLASS_ROGUE:
 			case CLASS_HUNTER:
+			//case CLASS_REAPER:
 				possibleSpells.push_back(SPELL_FLASK_OF_THE_NORTH_AP);
 				break;
 			case CLASS_DRUID:
@@ -2695,6 +2696,9 @@ public:
 				QueryResult result = WorldDatabase.PQuery("SELECT entry_to FROM item_sharps WHERE entry = %u", TarItem->GetEntry());
 				if (!result)
 					return SPELL_FAILED_BAD_TARGETS;
+				
+				if (TarItem->GetOwner() != GetCaster()->ToPlayer())
+					return SPELL_FAILED_BAD_TARGETS;
 
 				Field* fields = result->Fetch();
 				new_entry = fields[0].GetUInt32();
@@ -2725,9 +2729,14 @@ public:
 				if (ChangeItem)  { 
 					TarItem->SetEntry(new_entry);
 					TarItem->SendUpdateToPlayer(TarItem->GetOwner());
+					TarItem->SetState(ITEM_CHANGED);
 					const std::string text_good = "Неплохо получилось.";
 					TarItem->GetOwner()->Say(text_good, LANG_UNIVERSAL);
 					TarItem->GetOwner()->HandleEmoteCommand(EMOTE_ONESHOT_CHEER);
+
+					SQLTransaction trans = CharacterDatabase.BeginTransaction();
+					TarItem->SaveToDB(trans);
+					CharacterDatabase.CommitTransaction(trans);
 				}
 				else  { 
 					const std::string text_bad = "Упс! Оно сломалось...";
@@ -2961,6 +2970,75 @@ public:
 	}
 };
 
+class spell_resurected : public SpellScriptLoader
+{
+public:
+	spell_resurected() : SpellScriptLoader("spell_resurected") { }
+
+	class spell_resurected_AuraScript : public AuraScript
+	{
+		PrepareAuraScript(spell_resurected_AuraScript);
+
+	public:
+		spell_resurected_AuraScript()
+		{
+			healPct = 0;
+		}
+
+	private:
+		uint32 healPct, absorbChance;
+
+		enum Spell
+		{
+			SPELL_RESURECTED_HEAL = 920030,
+		};
+
+		bool Load() override
+		{
+			absorbChance = GetSpellInfo()->Effects[EFFECT_0].CalcValue();
+			healPct = GetSpellInfo()->Effects[EFFECT_1].CalcValue();
+			return GetUnitOwner()->GetTypeId() == TYPEID_PLAYER;
+		}
+
+		void CalculateAmount(AuraEffect const* /*aurEff*/, int32 & amount, bool & /*canBeRecalculated*/)
+		{
+			// Set absorbtion amount to unlimited
+			amount = -1;
+		}
+
+		void Absorb(AuraEffect* aurEff, DamageInfo & dmgInfo, uint32 & absorbAmount)
+		{
+			Unit* victim = GetTarget();
+			int32 remainingHealth = victim->GetHealth() - dmgInfo.GetDamage();
+			// If damage kills us
+			if (remainingHealth <= 0 
+				&& !victim->GetSpellHistory()->HasCooldown(SPELL_RESURECTED_HEAL) 
+				&& roll_chance_i(absorbChance)
+				&& !victim->HasAura(SPELL_RESURECTED_HEAL + 1))
+			{
+				// Cast healing spell, completely avoid damage
+				absorbAmount = dmgInfo.GetDamage();
+
+				int32 healAmount = int32(victim->CountPctFromMaxHealth(uint32(healPct)));
+				victim->CastCustomSpell(victim, SPELL_RESURECTED_HEAL, &healAmount, NULL, NULL, true, NULL, aurEff);
+				victim->CastSpell(victim, SPELL_RESURECTED_HEAL + 2, TRIGGERED_FULL_MASK, NULL, aurEff);
+				victim->GetSpellHistory()->AddCooldown(SPELL_RESURECTED_HEAL, 0, std::chrono::minutes(3));
+			}
+		}
+
+		void Register() override
+		{
+			DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_resurected_AuraScript::CalculateAmount, EFFECT_0, SPELL_AURA_SCHOOL_ABSORB);
+			OnEffectAbsorb += AuraEffectAbsorbFn(spell_resurected_AuraScript::Absorb, EFFECT_0);
+		}
+	};
+
+	AuraScript* GetAuraScript() const override
+	{
+		return new spell_resurected_AuraScript();
+	}
+};
+
 void AddSC_item_spell_scripts()
 {
 	// 23074 Arcanite Dragonling
@@ -3040,4 +3118,5 @@ void AddSC_item_spell_scripts()
 
 	new spell_item_froustmourne();
 	new spell_item_leg_pike();
+	new spell_resurected();
 }

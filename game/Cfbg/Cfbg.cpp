@@ -261,6 +261,7 @@ bool BattlegroundQueue::FillXPlayersToBG(BattlegroundBracketId bracket_id, Battl
 
 
                // Add teams to their own factions as far as possible.
+			   /*
                if (start)
                {
                        QueuedGroupMap m_PreGroupMap_a, m_PreGroupMap_h;
@@ -292,6 +293,7 @@ bool BattlegroundQueue::FillXPlayersToBG(BattlegroundBracketId bracket_id, Battl
                        valiFree -= PreAddPlayers(m_PreGroupMap_a, m_SmallestOfTeams, aliFree);
                        vhordeFree -= PreAddPlayers(m_PreGroupMap_h, m_SmallestOfTeams, hordeFree);
                }
+			   */
 
                QueuedGroupMap m_QueuedGroupMap;
 
@@ -318,7 +320,8 @@ bool BattlegroundQueue::FillXPlayersToBG(BattlegroundBracketId bracket_id, Battl
 
                        if (diff > 0)
                                ginfo->Team = moreAli ? HORDE : ALLIANCE;
-
+					   else 
+						   ginfo->Team = urand(0, 1) == 1 ? HORDE : ALLIANCE;
                        bool alliance = ginfo->Team == ALLIANCE;
 
                        if (m_SelectionPools[alliance ? TEAM_ALLIANCE : TEAM_HORDE].AddGroup(ginfo, alliance ? aliFree : hordeFree))

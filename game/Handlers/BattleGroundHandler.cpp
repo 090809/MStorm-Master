@@ -199,7 +199,7 @@ void WorldSession::HandleBattlemasterJoinOpcode(WorldPacket& recvData)
     }
     else
     {
-		//return;
+		return;
         grp = _player->GetGroup();
         // no group found, error
         if (!grp)

@@ -401,6 +401,9 @@ void Unit::UpdateSplineMovement(uint32 t_diff)
 
 void Unit::UpdateSplinePosition()
 {
+	if (!movespline->Initialized())
+		return;
+
     static uint32 const positionUpdateDelay = 400;
 
     m_movesplineTimer.Reset(positionUpdateDelay);
@@ -2538,7 +2541,9 @@ SpellMissInfo Unit::MagicSpellHitResult(Unit* victim, SpellInfo const* spellInfo
     int32 thisLevel = getLevelForTarget(victim);
     if (GetTypeId() == TYPEID_UNIT && ToCreature()->IsTrigger())
         thisLevel = std::max<int32>(thisLevel, spellInfo->SpellLevel + 40);
-    int32 leveldif = int32(victim->getLevelForTarget(this)) - thisLevel;
+	//Упрощаем модель поведения хитов.
+	int32 leveldif = 0; 
+	//int32(victim->getLevelForTarget(this)) - thisLevel;
 
     // Base hit chance from attacker and victim levels
     int32 modHitChance;
@@ -2566,7 +2571,7 @@ SpellMissInfo Unit::MagicSpellHitResult(Unit* victim, SpellInfo const* spellInfo
 
     int32 HitChance = modHitChance * 100;
     // Increase hit chance from attacker SPELL_AURA_MOD_SPELL_HIT_CHANCE and attacker ratings
-    HitChance += int32(m_modSpellHitChance * 100.0f);
+    HitChance += int32((m_modSpellHitChance > 5 ? 5 : m_modSpellHitChance) * 100.0f);
 
     RoundToInterval(HitChance, 100, 10000);
 
@@ -5321,6 +5326,7 @@ bool Unit::HandleDummyAuraProc(Unit* victim, uint32 damage, AuraEffect* triggere
                         case CLASS_ROGUE:                   // 39511, 40997, 40998, 41002, 41005, 41011
                         case CLASS_WARRIOR:                 // 39511, 40997, 40998, 41002, 41005, 41011
                         case CLASS_DEATH_KNIGHT:
+						//case CLASS_REAPER:
                             triggered_spell_id = RAND(39511, 40997, 40998, 41002, 41005, 41011);
                             cooldown_spell_id = 39511;
                             break;
@@ -6557,6 +6563,7 @@ bool Unit::HandleDummyAuraProc(Unit* victim, uint32 damage, AuraEffect* triggere
                             break;
                         case CLASS_HUNTER:
                         case CLASS_ROGUE:
+						//case CLASS_REAPER
                             triggered_spell_id = 28791;     // Increases the friendly target's attack power by $s1 for $d.
                             break;
                         case CLASS_WARRIOR:
@@ -6839,6 +6846,7 @@ bool Unit::HandleDummyAuraProc(Unit* victim, uint32 damage, AuraEffect* triggere
                             break;
                         case CLASS_HUNTER:
                         case CLASS_ROGUE:
+						//case CLASS_REAPER:
                             triggered_spell_id = 28826;     // Increases the friendly target's attack power by $s1 for $d.
                             break;
                         case CLASS_WARRIOR:
@@ -7544,6 +7552,10 @@ bool Unit::HandleDummyAuraProc(Unit* victim, uint32 damage, AuraEffect* triggere
             }
             break;
         }
+		//case SPELLFAMILY_REAPER:
+		//{
+		//	break;
+		//}
 		case SPELLFAMILY_MYSTIC:
 		{	
 			switch (dummySpell->Id)
@@ -7555,7 +7567,7 @@ bool Unit::HandleDummyAuraProc(Unit* victim, uint32 damage, AuraEffect* triggere
 					// health
 					if (HasAura(300214))
 						triggerAmount *= 1.2f;
-					else if (HasAura(300213))
+					if (HasAura(300213))
 						triggerAmount *= 1.1f;
 					basepoints0 = CalculatePct(int32(damage), triggerAmount);
 					target = this;
@@ -7981,6 +7993,19 @@ bool Unit::HandleProcTriggerSpell(Unit* victim, uint32 damage, AuraEffect* trigg
                             RemoveAurasDueToSpell(50240);
                         break;
                     }
+					case 800011:
+					{
+						if (GetTypeId() != TYPEID_PLAYER)
+							return false;
+						if (!victim)
+							return false;
+						if (!victim->HasAura(700000))
+							return false;
+
+						trigger_spell_id = 800012;
+						basepoints0 = CalculatePct(int32(damage), triggerAmount);
+						break;
+					}
                 }
                 break;
             case SPELLFAMILY_MAGE:
@@ -10135,6 +10160,9 @@ void Unit::SendEnergizeSpellLog(Unit* victim, uint32 spellId, int32 damage, Powe
 
 void Unit::EnergizeBySpell(Unit* victim, uint32 spellId, int32 damage, Powers powerType)
 {
+	if (victim->HasAura(200536) && powerType == POWER_MANA && damage > 0)
+		return;
+
     SendEnergizeSpellLog(victim, spellId, damage, powerType);
     // needs to be called after sending spell log
     victim->ModifyPower(powerType, damage);
@@ -11327,6 +11355,10 @@ uint32 Unit::SpellHealingBonusTaken(Unit* caster, SpellInfo const* spellProto, u
 			}
 		}
 
+		//Обрезаем самозахилшп
+		if (HasSpell(15473) && spellProto->SchoolMask & SPELL_SCHOOL_MASK_HOLY)
+			AddPct(TakenTotalMod, -60);
+
 		if (count >= 40) //Мы поймали рестора
 			AddPct(TakenTotalMod, -30);
 	}
@@ -11404,7 +11436,7 @@ bool Unit::IsImmunedToDamage(SpellInfo const* spellInfo) const
         return false;
 
     uint32 shoolMask = spellInfo->GetSchoolMask();
-    if (spellInfo->Id != 42292 && spellInfo->Id != 59752)
+    if (spellInfo->Id != 42292 && spellInfo->Id != 800110)
     {
         // If m_immuneToSchool type contain this school type, IMMUNE damage.
         SpellImmuneList const& schoolList = m_spellImmune[IMMUNITY_SCHOOL];
@@ -11470,7 +11502,7 @@ bool Unit::IsImmunedToSpell(SpellInfo const* spellInfo) const
     if (immuneToAllEffects) //Return immune only if the target is immune to all spell effects.
         return true;
 
-    if (spellInfo->Id != 42292 && spellInfo->Id != 59752)
+    if (spellInfo->Id != 42292 && spellInfo->Id != 800110)
     {
         SpellImmuneList const& schoolList = m_spellImmune[IMMUNITY_SCHOOL];
         for (SpellImmuneList::const_iterator itr = schoolList.begin(); itr != schoolList.end(); ++itr)
@@ -14883,18 +14915,20 @@ void Unit::SendPetAIReaction(ObjectGuid guid)
 
 ///----------End of Pet responses methods----------
 
-void Unit::StopMoving()
+void Unit::StopMoving(bool force /* = false */)
 {
     ClearUnitState(UNIT_STATE_MOVING);
 
     // not need send any packets if not in world or not moving
-    if (!IsInWorld() || movespline->Finalized())
+	if (!force && (!IsInWorld() || !isMoving()))
         return;
-
+	if (!movespline->Finalized())
+		UpdateSplinePosition();
     // Update position now since Stop does not start a new movement that can be updated later
-    UpdateSplinePosition();
+
     Movement::MoveSplineInit init(this);
     init.Stop();
+	RemoveUnitMovementFlag(MOVEMENTFLAG_MASK_MOVING);
 }
 
 void Unit::SendMovementFlagUpdate(bool self /* = false */)
@@ -17862,7 +17896,7 @@ void Unit::SetFacingTo(float ori)
 void Unit::SetFacingToObject(WorldObject* object)
 {
     // never face when already moving
-    if (!IsStopped())
+    if (isMoving())
         return;
 
     /// @todo figure out under what conditions creature will move towards object instead of facing it where it currently is.

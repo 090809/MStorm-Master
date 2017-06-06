@@ -253,6 +253,8 @@ Item::Item()
     m_refundRecipient = 0;
     m_paidMoney = 0;
     m_paidExtendedCost = 0;
+
+	m_savedEntry = 0;
 }
 
 bool Item::Create(uint32 guidlow, uint32 itemid, Player const* owner)
@@ -352,6 +354,7 @@ void Item::SaveToDB(SQLTransaction& trans)
             stmt->setUInt16(++index, GetUInt32Value(ITEM_FIELD_DURABILITY));
             stmt->setUInt32(++index, GetUInt32Value(ITEM_FIELD_CREATE_PLAYED_TIME));
             stmt->setString(++index, m_text);
+			stmt->setUInt32(++index, m_savedEntry);
             stmt->setUInt32(++index, guid);
 
             trans->Append(stmt);
@@ -400,8 +403,8 @@ void Item::SaveToDB(SQLTransaction& trans)
 
 bool Item::LoadFromDB(uint32 guid, ObjectGuid owner_guid, Field* fields, uint32 entry)
 {
-    //                                                    0                1      2         3        4      5             6                 7           8           9    10
-    //result = CharacterDatabase.PQuery("SELECT creatorGuid, giftCreatorGuid, count, duration, charges, flags, enchantments, randomPropertyId, durability, playedTime, text FROM item_instance WHERE guid = '%u'", guid);
+    //                                                    0                1      2         3        4      5             6                 7           8           9    10				  11
+    //result = CharacterDatabase.PQuery("SELECT creatorGuid, giftCreatorGuid, count, duration, charges, flags, enchantments, randomPropertyId, durability, playedTime, text, saved_itemEntry FROM item_instance WHERE guid = '%u'", guid);
 
     // create item before any checks for store correct guid
     // and allow use "FSetState(ITEM_REMOVED); SaveToDB();" for deleting item from DB
@@ -1423,4 +1426,38 @@ void Item::ItemContainerDeleteLootMoneyAndLootItemsFromDB()
     // Deletes money and items associated with an openable item from the DB
     ItemContainerDeleteLootMoneyFromDB();
     ItemContainerDeleteLootItemsFromDB();
+}
+
+void Item::ChangeEntryInBG(uint32 entry, bool update)
+{
+	m_savedEntry = GetEntry(); 
+	SetEntry(entry);
+
+	if (!update)
+		return;
+
+	int index = 0;
+	PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPDATE_BGS_ITEMS_TO_BACKUP);
+	stmt->setUInt32(index, m_savedEntry);
+	stmt->setUInt32(++index, entry);
+	stmt->setUInt32(++index, GetGUIDLow());
+	CharacterDatabase.Execute(stmt);
+}
+
+void Item::RemoveSavedEntry(uint32 _m_savedEntry)
+{
+	if (m_savedEntry == 0 && _m_savedEntry == 0)
+		return;
+
+	if (_m_savedEntry != 0)
+		m_savedEntry = _m_savedEntry;
+
+	int index = 0;
+	PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPDATE_BGS_ITEMS_TO_BACKUP_DELETE);
+	stmt->setUInt32(index, m_savedEntry);
+	stmt->setUInt32(++index, GetGUIDLow());
+	CharacterDatabase.Execute(stmt);
+
+	SetEntry(m_savedEntry);
+	m_savedEntry = 0;
 }

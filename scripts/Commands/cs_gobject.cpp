@@ -32,6 +32,8 @@ EndScriptData */
 #include "Player.h"
 #include "Opcodes.h"
 
+#define MAP_TEST 13
+
 class gobject_commandscript : public CommandScript
 {
 public:
@@ -92,7 +94,7 @@ public:
         if (GameObjectData const* goData = sObjectMgr->GetGOData(guidLow))
             object = handler->GetObjectGlobalyWithGuidOrNearWithDbGuid(guidLow, goData->id);
 
-        if (!object)
+        if (!object || (object->GetMapId() != MAP_TEST && handler->GetSession()->GetSecurity() < SEC_ADMINISTRATOR))
         {
             handler->PSendSysMessage(LANG_COMMAND_OBJNOTFOUND, guidLow);
             handler->SetSentErrorMessage(true);
@@ -122,12 +124,6 @@ public:
         uint32 objectId = atoul(id);
         if (!objectId)
             return false;
-		switch (objectId) {
-		case 300002:
-		case 300001:
-			if (handler->GetSession()->GetSecurity() < SEC_ADMINISTRATOR)
-				return false;
-		}
 
         char* spawntimeSecs = strtok(NULL, " ");
 
@@ -155,6 +151,9 @@ public:
         float z = float(player->GetPositionZ());
         float o = float(player->GetOrientation());
         Map* map = player->GetMap();
+
+		if (map->GetId() != MAP_TEST && handler->GetSession()->GetSecurity() < SEC_ADMINISTRATOR)
+			return false;
 
         GameObject* object = new GameObject;
         uint32 guidLow = sObjectMgr->GenerateLowGuid(HIGHGUID_GAMEOBJECT);
@@ -226,6 +225,9 @@ public:
             handler->SetSentErrorMessage(true);
             return false;
         }
+
+		if (player->GetMapId() != MAP_TEST && handler->GetSession()->GetSecurity() < SEC_ADMINISTRATOR)
+			return false;
 
         player->SummonGameObject(objectId, x, y, z, ang, 0, 0, rot2, rot3, spawntm);
 
@@ -367,7 +369,7 @@ public:
         if (GameObjectData const* gameObjectData = sObjectMgr->GetGOData(guidLow))
             object = handler->GetObjectGlobalyWithGuidOrNearWithDbGuid(guidLow, gameObjectData->id);
 
-        if (!object)
+        if (!object || (object->GetMapId() != MAP_TEST && handler->GetSession()->GetSecurity() < SEC_ADMINISTRATOR))
         {
             handler->PSendSysMessage(LANG_COMMAND_OBJNOTFOUND, guidLow);
             handler->SetSentErrorMessage(true);
@@ -415,7 +417,7 @@ public:
         if (GameObjectData const* gameObjectData = sObjectMgr->GetGOData(guidLow))
             object = handler->GetObjectGlobalyWithGuidOrNearWithDbGuid(guidLow, gameObjectData->id);
 
-        if (!object)
+        if (!object || (object->GetMapId() != MAP_TEST && handler->GetSession()->GetSecurity() < SEC_ADMINISTRATOR))
         {
             handler->PSendSysMessage(LANG_COMMAND_OBJNOTFOUND, guidLow);
             handler->SetSentErrorMessage(true);
@@ -464,7 +466,7 @@ public:
         if (GameObjectData const* gameObjectData = sObjectMgr->GetGOData(guidLow))
             object = handler->GetObjectGlobalyWithGuidOrNearWithDbGuid(guidLow, gameObjectData->id);
 
-        if (!object)
+        if (!object || (object->GetMapId() != MAP_TEST && handler->GetSession()->GetSecurity() < SEC_ADMINISTRATOR))
         {
             handler->PSendSysMessage(LANG_COMMAND_OBJNOTFOUND, guidLow);
             handler->SetSentErrorMessage(true);
@@ -529,7 +531,7 @@ public:
         if (GameObjectData const* gameObjectData = sObjectMgr->GetGOData(guidLow))
             object = handler->GetObjectGlobalyWithGuidOrNearWithDbGuid(guidLow, gameObjectData->id);
 
-        if (!object)
+        if (!object || (object->GetMapId() != MAP_TEST && handler->GetSession()->GetSecurity() < SEC_ADMINISTRATOR))
         {
             handler->PSendSysMessage(LANG_COMMAND_OBJNOTFOUND, guidLow);
             handler->SetSentErrorMessage(true);
@@ -651,7 +653,7 @@ public:
         if (GameObjectData const* gameObjectData = sObjectMgr->GetGOData(guidLow))
             object = handler->GetObjectGlobalyWithGuidOrNearWithDbGuid(guidLow, gameObjectData->id);
 
-        if (!object)
+        if (!object || (object->GetMapId() != MAP_TEST && handler->GetSession()->GetSecurity() < SEC_ADMINISTRATOR))
         {
             handler->PSendSysMessage(LANG_COMMAND_OBJNOTFOUND, guidLow);
             handler->SetSentErrorMessage(true);
@@ -707,7 +709,7 @@ public:
         if (GameObjectData const* gameObjectData = sObjectMgr->GetGOData(guidLow))
             object = handler->GetObjectGlobalyWithGuidOrNearWithDbGuid(guidLow, gameObjectData->id);
 
-        if (!object)
+        if (!object || (object->GetMapId() != MAP_TEST && handler->GetSession()->GetSecurity() < SEC_ADMINISTRATOR))
         {
             handler->PSendSysMessage(LANG_COMMAND_OBJNOTFOUND, guidLow);
             handler->SetSentErrorMessage(true);

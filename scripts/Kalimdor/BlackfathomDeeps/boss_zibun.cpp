@@ -46,6 +46,7 @@ enum Events
 	EVENT_SPELL_AURA_ZIBUN_SLIMES = 1,
 	EVENT_SPELL_WATER_NOVA,
 	EVENT_SPELL_POISON,
+	EVENT_KILL_NO_AURA,
 };
 
 enum NPCS
@@ -128,6 +129,7 @@ public:
 			events.SetPhase(PHASE_ONE);
 			events.ScheduleEvent(EVENT_SPELL_AURA_ZIBUN_SLIMES, urand(4000, 23000));
 			events.ScheduleEvent(EVENT_SPELL_WATER_NOVA, urand(13000, 24000));
+			events.ScheduleEvent(EVENT_KILL_NO_AURA, 5000);
 			cloud = me->FindNearestCreature(DUMMY_CLOUD, 100);
 			me->AddAura(SPELL_AURA_ZIBUN_CONTOR, cloud);
 			me->AddAura(SPELL_AURA_ZIBUN_CONTOR_VISUAL, cloud);
@@ -148,6 +150,12 @@ public:
 			case EVENT_SPELL_POISON:
 				DoCast(SPELL_POISON);
 				events.ScheduleEvent(EVENT_SPELL_POISON, urand(12000, 17000));
+				break;
+			case EVENT_KILL_NO_AURA:
+				if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 1000.0f))
+					if (!target->HasAura(SPELL_AURA_ZIBUN_CONTOR))
+						me->DealDamage(target, target->GetMaxHealth());
+				events.ScheduleEvent(EVENT_KILL_NO_AURA, 5000);
 				break;
 			}
 		}

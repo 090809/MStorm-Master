@@ -115,16 +115,17 @@ enum Classes
     CLASS_SHAMAN        = 7,
     CLASS_MAGE          = 8,
     CLASS_WARLOCK       = 9,
-    CLASS_MYSTIC           = 10,
-    CLASS_DRUID         = 11
+    CLASS_MYSTIC        = 10,
+    CLASS_DRUID         = 11,
+	CLASS_REAPER		= 12,
 };
 
 // max+1 for player class
-#define MAX_CLASSES       12
+#define MAX_CLASSES       13
 
 #define CLASSMASK_ALL_PLAYABLE \
     ((1<<(CLASS_WARRIOR-1))|(1<<(CLASS_PALADIN-1))|(1<<(CLASS_HUNTER-1))| \
-    (1<<(CLASS_ROGUE-1))  |(1<<(CLASS_PRIEST-1)) |(1<<(CLASS_SHAMAN-1))| \
+    (1<<(CLASS_ROGUE-1))  |(1<<(CLASS_PRIEST-1)) |(1<<(CLASS_SHAMAN-1))| (1<<(CLASS_REAPER-1))| \
     (1<<(CLASS_MAGE-1))   |(1<<(CLASS_WARLOCK-1))|(1<<(CLASS_DRUID-1)) | (1<<(CLASS_MYSTIC-1))| \
     (1<<(CLASS_DEATH_KNIGHT-1)))
 
@@ -563,9 +564,9 @@ enum SpellAttr7
 };
 
 #define MIN_TALENT_SPEC         0
-#define MAX_TALENT_SPEC         1
+#define MAX_TALENT_SPEC         2
 #define MIN_TALENT_SPECS        1
-#define MAX_TALENT_SPECS        2
+#define MAX_TALENT_SPECS        3
 #define MAX_GLYPH_SLOT_INDEX    6
 
 // Custom values
@@ -3384,7 +3385,7 @@ enum SpellFamilyNames
     SPELLFAMILY_SHAMAN      = 11,
     SPELLFAMILY_UNK2        = 12,                           // 2 spells (silence resistance)
     SPELLFAMILY_POTION      = 13,
-    // 14 - unused
+	SPELLFAMILY_REAPER		= 14,
     SPELLFAMILY_DEATHKNIGHT = 15,
     // 16 - unused
     SPELLFAMILY_PET         = 17

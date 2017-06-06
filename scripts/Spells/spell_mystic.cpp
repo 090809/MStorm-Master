@@ -309,11 +309,21 @@ public:
 		SpellCastResult CheckCast()
 		{
 			dest = GetExplTargetDest();
-			if (GetCaster()->GetPositionZ() - dest->GetPositionZ() < -5.0f)
-				return SPELL_FAILED_OUT_OF_RANGE;
-
 			orient = GetCaster()->GetOrientation();
 
+			float range = GetSpellInfo()->GetMaxRange(true, GetCaster(), GetSpell()) * 2.0f; // can't be overly strict
+
+			PathGenerator m_preGeneratedPath(GetCaster());
+			m_preGeneratedPath.SetPathLengthLimit(range);
+			// first try with raycast, if it fails fall back to normal path
+			float targetObjectSize = 4.0f;
+			bool result = m_preGeneratedPath.CalculatePath(dest->GetPositionX(), dest->GetPositionY(), dest->GetPositionZ(), false, false);
+			if (m_preGeneratedPath.GetPathType() & PATHFIND_SHORT)
+				return SPELL_FAILED_OUT_OF_RANGE;
+			else if (!result || m_preGeneratedPath.GetPathType() & (PATHFIND_NOPATH | PATHFIND_INCOMPLETE))
+			{
+				return SPELL_FAILED_NOPATH;
+			}
 			return SPELL_CAST_OK;
 		}
 
@@ -327,11 +337,21 @@ public:
 				caster->CastSpell(caster, 30918);
 			}
 
-			float x, y, z, o;
+			float x, y, z, o, z_old;
 			dest->GetPosition(x, y, z, o);
+			z_old = caster->GetPositionZ();
 			Unit* victim = caster->GetVictim();
+
+			if (z - z_old > 10)
+			{
+				if (caster->HasAura(23335))
+					caster->RemoveAura(23335);
+				if (caster->HasAura(23333))
+					caster->RemoveAura(23333);
+			}
+
 			caster->NearTeleportTo(x, y, z, orient);
-			
+
 			if (victim)
 				caster->Attack(victim, true);
 

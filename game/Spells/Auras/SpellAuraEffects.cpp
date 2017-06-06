@@ -3306,7 +3306,7 @@ void AuraEffect::HandleModMechanicImmunity(AuraApplication const* aurApp, uint8 
             target->ApplySpellImmune(GetId(), IMMUNITY_MECHANIC, MECHANIC_SAPPED, apply);
             break;
         case 42292: // PvP trinket
-        case 59752: // Every Man for Himself
+        case 800110: // Every Man for Himself
             mechanic = IMMUNE_TO_MOVEMENT_IMPAIRMENT_AND_LOSS_CONTROL_MASK;
             // Actually we should apply immunities here, too, but the aura has only 100 ms duration, so there is practically no point
             break;
@@ -4965,6 +4965,12 @@ void AuraEffect::HandleAuraDummy(AuraApplication const* aurApp, uint8 mode, bool
 			//break;
 			break;
 		}
+		/*case SPELLFAMILY_REAPER:
+		{
+			//if (!(mode & AURA_EFFECT_HANDLE_REAL))
+			//break;
+			break;
+		}*/
         case SPELLFAMILY_PRIEST:
         {
             //if (!(mode & AURA_EFFECT_HANDLE_REAL))
@@ -5501,6 +5507,8 @@ void AuraEffect::HandlePeriodicDummyAuraTick(Unit* target, Unit* caster) const
 			break;
 		case SPELLFAMILY_MYSTIC:
 			break;
+		//case SPELLFAMILY_REAPER:
+		//	break;
         default:
             break;
     }
@@ -6068,7 +6076,7 @@ void AuraEffect::HandlePeriodicHealthLeechAuraTick(Unit* target, Unit* caster) c
         heal = uint32(caster->SpellHealingBonusTaken(caster, GetSpellInfo(), heal, DOT, GetBase()->GetStackAmount()));
 
         int32 gain = caster->HealBySpell(caster, GetSpellInfo(), heal);
-        caster->getHostileRefManager().threatAssist(caster, gain * 0.5f, GetSpellInfo());
+        caster->getHostileRefManager().threatAssist(caster, gain * 0.05f, GetSpellInfo());
     }
 }
 
@@ -6203,7 +6211,7 @@ void AuraEffect::HandlePeriodicHealAurasTick(Unit* target, Unit* caster) const
     SpellPeriodicAuraLogInfo pInfo(this, heal, heal - gain, absorb, 0, 0.0f, crit);
     target->SendPeriodicAuraLog(&pInfo);
 
-    target->getHostileRefManager().threatAssist(caster, float(gain) * 0.5f, GetSpellInfo());
+    target->getHostileRefManager().threatAssist(caster, float(gain) * 0.05f, GetSpellInfo());
 
     bool haveCastItem = !GetBase()->GetCastItemGUID().IsEmpty();
 

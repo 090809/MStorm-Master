@@ -209,7 +209,7 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
             break;
     }
 
-	if (sender->getLevel() < 120 && !HasPermission(rbac::RBAC_PERM_COMMAND_GM) && type != CHAT_MSG_WHISPER)
+	if (sender->getLevel() < 120 && !HasPermission(rbac::RBAC_PERM_COMMAND_GM) && (type != CHAT_MSG_WHISPER || type != CHAT_MSG_PARTY || type != CHAT_MSG_PARTY_LEADER || type != CHAT_MSG_GUILD))
 	{
 		SendNotification(GetTrinityString(LANG_LOW_LVL_MUTE));
 		recvData.rfinish();

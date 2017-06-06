@@ -37,6 +37,8 @@
 #include "DisableMgr.h"
 #include "SpellHistory.h"
 
+#define MAP_TEST 13
+
 enum EnchantsVisuals {
 
 };
@@ -485,7 +487,7 @@ public:
     static bool HandleUnAuraCommand(ChatHandler* handler, char const* args)
     {
         Unit* target = handler->getSelectedUnit();
-        if (!target)
+        if (!target || (target->GetMapId() != MAP_TEST && handler->GetSession()->GetSecurity() < SEC_ADMINISTRATOR))
         {
             handler->SendSysMessage(LANG_SELECT_CHAR_OR_CREATURE);
             handler->SetSentErrorMessage(true);
@@ -776,7 +778,7 @@ public:
     {
         Unit* target = handler->getSelectedUnit();
 
-        if (!target || !handler->GetSession()->GetPlayer()->GetTarget())
+        if (!target || !handler->GetSession()->GetPlayer()->GetTarget() || (target->GetMapId() != MAP_TEST && handler->GetSession()->GetSecurity() < SEC_ADMINISTRATOR))
         {
             handler->SendSysMessage(LANG_SELECT_CHAR_OR_CREATURE);
             handler->SetSentErrorMessage(true);

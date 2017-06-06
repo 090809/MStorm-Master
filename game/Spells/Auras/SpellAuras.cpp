@@ -1337,6 +1337,8 @@ void Aura::HandleAuraSpecificMods(AuraApplication const* aurApp, Unit* caster, b
 			break;
 		case SPELLFAMILY_MYSTIC:
 			break;
+		case SPELLFAMILY_REAPER:
+			break;
 		case SPELLFAMILY_DEATHKNIGHT:
 			if (!caster)
 				break;

@@ -429,7 +429,8 @@ void LoadDBCStores(const std::string& dataPath)
                 SkillRaceClassInfoBySkill.emplace(entry->SkillId, entry);
 
     LoadDBC(availableDbcLocales, bad_dbc_files, sSkillTiersStore,             dbcPath, "SkillTiers.dbc");
-    LoadDBC(availableDbcLocales, bad_dbc_files, sSoundEntriesStore,           dbcPath, "SoundEntries.dbc");
+    LoadDBC(availableDbcLocales, bad_dbc_files, sSpellIconPathStore,          dbcPath, "SpellIcon.dbc");
+	LoadDBC(availableDbcLocales, bad_dbc_files, sSoundEntriesStore,			  dbcPath, "SoundEntries.dbc");
     LoadDBC(availableDbcLocales, bad_dbc_files, sSpellStore,                  dbcPath, "Spell.dbc", &CustomSpellEntryfmt, &CustomSpellEntryIndex);
     for (uint32 i = 1; i < sSpellStore.GetNumRows(); ++i)
     {

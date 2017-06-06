@@ -215,7 +215,14 @@ void PetAI::UpdateAI(uint32 diff)
             else if (me->GetVictim() && CanAttack(me->GetVictim()) && spellInfo->CanBeUsedInCombat())
             {
                 Spell* spell = new Spell(me, spellInfo, TRIGGERED_NONE);
-                if (spell->CanAutoCast(me->GetVictim()))
+				bool can_cast_smash = me->ToPet() && me->ToPet()->IsPetGhoul() && spellInfo->Id == 47468 && me->GetPower(POWER_ENERGY) > 70;
+				if (me->ToPet() && me->ToPet()->IsPetGhoul())
+				{
+					if (spellInfo->Id == 47468 && me->GetPower(POWER_ENERGY) > 70 && spell->CanAutoCast(me->GetVictim()))
+						targetSpellStore.push_back(std::make_pair(me->GetVictim(), spell));
+					else
+						delete spell;
+				} else if (spell->CanAutoCast(me->GetVictim()))
                     targetSpellStore.push_back(std::make_pair(me->GetVictim(), spell));
                 else
                     delete spell;

@@ -121,15 +121,16 @@ void FleeingMovementGenerator<T>::DoInitialize(T* owner)
 
     owner->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_FLEEING);
     owner->AddUnitState(UNIT_STATE_FLEEING | UNIT_STATE_FLEEING_MOVE);
+
     _setTargetLocation(owner);
 }
-
 template<>
 void FleeingMovementGenerator<Player>::DoFinalize(Player* owner)
 {
     owner->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_FLEEING);
     owner->ClearUnitState(UNIT_STATE_FLEEING | UNIT_STATE_FLEEING_MOVE);
     owner->StopMoving();
+	
 }
 
 template<>
@@ -140,6 +141,7 @@ void FleeingMovementGenerator<Creature>::DoFinalize(Creature* owner)
     if (owner->GetVictim())
         owner->SetTarget(owner->EnsureVictim()->GetGUID());
 }
+
 
 template<class T>
 void FleeingMovementGenerator<T>::DoReset(T* owner)

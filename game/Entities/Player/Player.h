@@ -1351,6 +1351,7 @@ class Player : public Unit, public GridObject<Player>
         void DestroyItemCount(Item* item, uint32& count, bool update);
         void DestroyConjuredItems(bool update);
         void DestroyZoneLimitedItem(bool update, uint32 new_zone);
+		void RemoveBGItems();
         void SplitItem(uint16 src, uint16 dst, uint32 count);
         void SwapItem(uint16 src, uint16 dst);
         void AddItemToBuyBackSlot(Item* pItem);
@@ -2357,7 +2358,7 @@ class Player : public Unit, public GridObject<Player>
         PresetMapType presetMap; // presetMap[presetId] = presetData
 #endif
 
-		void SaveBGItem(uint32 to_save, uint32 new_entry, uint32 GUIDlow);
+		bool SaveBGItem(uint32 to_save, uint32 new_entry, uint32 GUIDlow);
 		void DeleteBGItems(uint32 saved_entry, uint32 GUIDlow);
 
 		bool m_player_changedbgitems;
@@ -2390,6 +2391,8 @@ class Player : public Unit, public GridObject<Player>
 				case 8: return id_8;
 				case 9: return id_9;
 				case 10: return id_10;
+				default:
+					return 0;
 				}
 			};
 

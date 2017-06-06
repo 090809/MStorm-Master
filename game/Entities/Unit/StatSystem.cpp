@@ -97,11 +97,7 @@ bool Player::UpdateStats(Stats stat)
     float value  = GetTotalStatValue(stat);
 
     SetStat(stat, int32(value));
-
-    if (stat == STAT_STAMINA || stat == STAT_INTELLECT || stat == STAT_STRENGTH)
-    {
-		RecalculatePetsScalingStats(stat);
-    }
+	RecalculatePetsScalingStats(stat);
 
     switch (stat)
     {
@@ -310,7 +306,7 @@ void Player::UpdateMaxPower(Powers power)
 
 	if (this->getClass() == CLASS_PALADIN)
 		if (HasAura(200047)) //Великолепие. Ограничивает ману на 15000 маны.
-			value = (value > 15000) ? 15000 : value;
+			value = (value > 10000) ? 10000 : value;
 
     SetMaxPower(power, uint32(value));
 }
@@ -379,6 +375,9 @@ void Player::UpdateAttackPowerAndDamage(bool ranged)
             case CLASS_ROGUE:
                 val2 = level * 2.0f + GetStat(STAT_STRENGTH) + GetStat(STAT_AGILITY) - 20.0f;
                 break;
+			//case CLASS_REAPER:
+			//	val2 = level * 2.0f + GetStat(STAT_STRENGTH) + GetStat(STAT_AGILITY) - 20.0f;
+			//	break;
             case CLASS_HUNTER:
                 val2 = level * 2.0f + GetStat(STAT_STRENGTH) + GetStat(STAT_AGILITY) - 20.0f;
                 break;
@@ -670,7 +669,8 @@ const float m_diminishing_k[MAX_CLASSES] =
     0.9830f,  // Mage
     0.9830f,  // Warlock
 	0.9830f,  // Mystic
-    0.9720f   // Druid
+    0.9720f,   // Druid
+//	0.9880f,  // Reaper
 };
 
 float Player::GetMissPercentageFromDefence() const
@@ -687,7 +687,8 @@ float Player::GetMissPercentageFromDefence() const
         16.00f,     // Mage    //?
         16.00f,     // Warlock //?
         16.00f,     // Mystic
-        16.00f      // Druid   //?
+        16.00f,     // Druid   //?
+//		16.00f,     // Reaper   //?
     };
 
     float diminishing = 0.0f, nondiminishing = 0.0f;
@@ -696,8 +697,8 @@ float Player::GetMissPercentageFromDefence() const
     diminishing += (int32(GetRatingBonusValue(CR_DEFENSE_SKILL))) * 0.04f;
 
     // apply diminishing formula to diminishing miss chance
-	uint32 pclass = (getClass() - 1 == CLASS_MYSTIC) ? CLASS_MAGE : getClass() - 1;
-    return nondiminishing + (diminishing * miss_cap[pclass] / (diminishing + miss_cap[pclass] * m_diminishing_k[pclass]));
+	uint32 pclass = getClass() - 1;
+	return nondiminishing + (diminishing * miss_cap[pclass] / (diminishing + miss_cap[pclass] * m_diminishing_k[pclass]));
 }
 
 void Player::UpdateParryPercentage()
@@ -714,13 +715,14 @@ void Player::UpdateParryPercentage()
         3.0f,           // Mage
         3.0f,           // Warlock
         3.0f,           // Mystic
-        0.0f            // Druid
+        0.0f,            // Druid
+//		26.560408f,    // Reaper
     };
 
     // No parry
     float value = 0.0f;
-	uint32 pclass = (getClass() - 1 == CLASS_MYSTIC) ? CLASS_MAGE : getClass() - 1;
-    if (CanParry() && parry_cap[pclass] > 0.0f)
+	uint32 pclass = getClass() - 1;
+	if (CanParry() && parry_cap[pclass] > 0.0f)
     {
         float nondiminishing  = 5.0f;
         // Parry from rating
@@ -755,7 +757,8 @@ void Player::UpdateDodgePercentage()
         4.375940f,    // Mage
         4.375940f,    // Warlock
 		4.375940f,    // Mystic
-        40.890707f     // Druid
+        40.890707f,     // Druid
+//		40.560408f,    // Reaper
     };
 
     float diminishing = 0.0f, nondiminishing = 0.0f;
@@ -768,7 +771,7 @@ void Player::UpdateDodgePercentage()
     // Dodge from rating
     diminishing += GetRatingBonusValue(CR_DODGE);
     // apply diminishing formula to diminishing dodge chance
-	uint32 pclass = (getClass() - 1 == CLASS_MYSTIC) ? CLASS_MAGE : getClass() - 1;
+	uint32 pclass = getClass() - 1;
     float value = nondiminishing + (diminishing * dodge_cap[pclass] / (diminishing + dodge_cap[pclass] * m_diminishing_k[pclass]));
 
     if (sWorld->getBoolConfig(CONFIG_STATS_LIMITS_ENABLE))
@@ -899,6 +902,12 @@ void Player::UpdateManaRegen()
     {
         power_regen_mp5 += GetStat(Stats((*i)->GetMiscValue())) * (*i)->GetAmount() / 500.0f;
     }
+
+	if (HasAura(200047) && power_regen_mp5 > 300) power_regen_mp5 = 300;
+	if (HasAura(200536)) { 
+		power_regen_mp5 = 0; 
+		power_regen = 0;
+	}
 
     // Set regen rate in cast state apply only on spirit based regen
     int32 modManaRegenInterrupt = GetTotalAuraModifier(SPELL_AURA_MOD_MANA_REGEN_INTERRUPT);
@@ -1109,21 +1118,108 @@ void Creature::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, 
 #define ENTRY_GHOUL             26125
 #define ENTRY_BLOODWORM         28017
 
+enum PetTalentsAndSpells
+{
+	SPELL_WILD_HUNT_1 = 62758,
+	SPELL_WILD_HUNT_2 = 62762,
+};
+
 bool Guardian::UpdateStats(Stats stat)
 {
     if (stat >= MAX_STATS)
         return false;
 
-    // value = ((base_value * base_pct) + total_value) * total_pct
-    float value  = GetTotalStatValue(stat);
+    float value = GetTotalStatValue(stat);
     ApplyStatBuffMod(stat, m_statFromOwner[stat], false);
-	//float value = GetTotalStatValue(stat);
-    float ownersBonus = 0.0f;
-
+	
+	float ownersBonus = 0, mod = 0;
     Unit* owner = GetOwner();
-    // Handle Death Knight Glyphs and Talents
-    float mod = 0.75f;
-    if (IsPetGhoul() && (stat == STAT_STAMINA || stat == STAT_STRENGTH))
+
+	switch (stat)
+	{
+	case STAT_STAMINA:
+		{
+			//DK Ghoul
+			if (IsPetGhoul())
+			{
+				mod = 0.5f;
+				AuraEffect const* aurEff = owner->GetAuraEffect(SPELL_AURA_MOD_TOTAL_STAT_PERCENTAGE, SPELLFAMILY_DEATHKNIGHT, 3010, 0);
+				if (aurEff)
+				{
+					SpellInfo const* spellInfo = aurEff->GetSpellInfo();                                                 // Then get the SpellProto and add the dummy effect value
+					AddPct(mod, spellInfo->Effects[EFFECT_1].CalcValue());                                              // Ravenous Dead edits the original scale
+				}
+				aurEff = owner->GetAuraEffect(58686, 0);
+				if (aurEff)
+					mod += CalculatePct(1.0f, aurEff->GetAmount());                                                    // Glyph of the Ghoul adds a flat value to the scale mod
+				ownersBonus = float(owner->GetStat(stat)) * mod;
+			}
+			//Warlock Pets
+			if (owner->getClass() == CLASS_WARLOCK && IsPet())
+			{
+				ownersBonus = CalculatePct(owner->GetStat(STAT_STAMINA), 85);
+			}
+			//Hunter Pets
+			if (owner->getClass() == CLASS_HUNTER && IsPet())
+			{
+				mod = 0.8f;
+				float n_mod = 1.0f;
+
+				if (ToPet()->m_spells.find(61686) != ToPet()->m_spells.end())
+					AddPct(n_mod, sSpellMgr->GetSpellInfo(61686)->Effects[0].CalcValue());
+				if (ToPet()->m_spells.find(61687) != ToPet()->m_spells.end())
+					AddPct(n_mod, sSpellMgr->GetSpellInfo(61687)->Effects[0].CalcValue());
+				if (ToPet()->m_spells.find(61688) != ToPet()->m_spells.end())
+					AddPct(n_mod, sSpellMgr->GetSpellInfo(61688)->Effects[0].CalcValue());
+
+				ownersBonus = float(owner->GetStat(stat)) * mod * n_mod;
+			}
+			//DK Ebon Gargoyle
+			if (GetEntry() == 27829)
+			{
+				mod = 0.4f;
+				ownersBonus = owner->GetStat(stat) * mod;
+			}
+			//Others
+			if (ownersBonus == 0)
+			{
+				mod = 0.7f;
+				ownersBonus = owner->GetStat(stat) * mod;
+			}
+		}
+		break;
+	case STAT_STRENGTH:
+		{	
+			if (IsPetGhoul())
+			{
+				mod = 0.5f;
+				AuraEffect const* aurEff = owner->GetAuraEffect(SPELL_AURA_MOD_TOTAL_STAT_PERCENTAGE, SPELLFAMILY_DEATHKNIGHT, 3010, 0);
+				if (aurEff)
+				{
+					SpellInfo const* spellInfo = aurEff->GetSpellInfo();                                                 // Then get the SpellProto and add the dummy effect value
+					AddPct(mod, spellInfo->Effects[EFFECT_1].CalcValue());                                              // Ravenous Dead edits the original scale
+				}
+				// Glyph of the Ghoul
+				aurEff = owner->GetAuraEffect(58686, 0);
+				if (aurEff)
+					mod += CalculatePct(1.0f, aurEff->GetAmount());                                                    // Glyph of the Ghoul adds a flat value to the scale mod
+				ownersBonus = float(owner->GetStat(stat)) * mod;
+			}
+
+		}
+		break;
+	case STAT_AGILITY:
+		ownersBonus = CalculatePct(owner->GetStat(stat), 75);
+		break;
+	case STAT_INTELLECT:
+		ownersBonus = CalculatePct(owner->GetStat(stat), 30);
+		break;
+	case STAT_SPIRIT:
+		ownersBonus = CalculatePct(owner->GetStat(stat), 150);
+		break;
+	}
+/*
+	if (IsPetGhoul() && (stat == STAT_STAMINA || stat == STAT_STRENGTH))
     {
         if (stat == STAT_STAMINA)
             mod = 0.4f; // Default Owner's Stamina scale
@@ -1193,14 +1289,14 @@ bool Guardian::UpdateStats(Stats stat)
 			value += ownersBonus;
 		}
 	}
-/*
+
     else if (stat == STAT_STRENGTH)
     {
         if (IsPetGhoul())
             value += float(owner->GetStat(stat)) * 0.3f;
     }
 */
-
+	value += ownersBonus;
     SetStat(stat, int32(value));
     m_statFromOwner[stat] = ownersBonus;
     ApplyStatBuffMod(stat, m_statFromOwner[stat], true);
@@ -1214,7 +1310,9 @@ bool Guardian::UpdateStats(Stats stat)
             UpdateArmor();
             UpdateMeleeCritChance();
             break;
-        case STAT_STAMINA: UpdateMaxHealth(); break;
+        case STAT_STAMINA: 
+			UpdateMaxHealth(); 
+			break;
         case STAT_INTELLECT:
             UpdateMaxPower(POWER_MANA);
             UpdateSpellCritChance();
@@ -1262,16 +1360,23 @@ void Guardian::UpdateArmor()
     float bonus_armor = 0.0f;
     UnitMods unitMod = UNIT_MOD_ARMOR;
 
-    // hunter and warlock pets gain 35% of owner's armor value
-    //if (IsPet())
-    //    bonus_armor = float(CalculatePct(m_owner->GetArmor(), 35));
+    // hunter and warlock pets gain 75% of owner's armor value
+    if (IsPet())
+		bonus_armor = float(CalculatePct(m_owner->GetArmor(), 75));
 
     value  = GetModifierValue(unitMod, BASE_VALUE);
     value *= GetModifierValue(unitMod, BASE_PCT);
-    value += GetStat(STAT_AGILITY) * 2.0f;
-    //value += GetModifierValue(unitMod, TOTAL_VALUE) + bonus_armor;
-	value += GetModifierValue(unitMod, TOTAL_VALUE);
+    value += GetModifierValue(unitMod, TOTAL_VALUE);
     value *= GetModifierValue(unitMod, TOTAL_PCT);
+
+	//minimum armor for pets
+	if (value < 4000)
+		value = 4000;
+
+	//Mage's Illusions get full armor from Mage
+	//Probably, bug -> Ice Elemental get it too.
+	if (GetOwner()->getClass() == CLASS_MAGE)
+		value = GetOwner()->GetArmor();
 
     SetArmor(int32(value));
 }
@@ -1338,10 +1443,7 @@ void Guardian::UpdateAttackPowerAndDamage(bool ranged)
     float bonusAP = 0.0f;
     UnitMods unitMod = UNIT_MOD_ATTACK_POWER;
 	
-	SetModifierValue(UNIT_MOD_ATTACK_POWER, BASE_VALUE, val + bonusAP); 
-	//val = 2 * GetStat(STAT_STRENGTH) - 20.0f;
-    
-      
+	SetModifierValue(UNIT_MOD_ATTACK_POWER, BASE_VALUE, val + bonusAP);
     
     if (GetEntry() == ENTRY_IMP || GetEntry() == ENTRY_GHOUL)                                   // imp's attack power
         val = GetStat(STAT_STRENGTH) - 10.0f;
@@ -1356,17 +1458,12 @@ void Guardian::UpdateAttackPowerAndDamage(bool ranged)
             float mod = 1.0f;                                                 //Hunter contribution modifier
             if (IsPet())
             {
-                PetSpellMap::const_iterator itr = ToPet()->m_spells.find(62758);    //Wild Hunt rank 1
-                if (itr == ToPet()->m_spells.end())
-                    itr = ToPet()->m_spells.find(62762);                            //Wild Hunt rank 2
-
-                if (itr != ToPet()->m_spells.end())                                 // If pet has Wild Hunt
-                {
-                    SpellInfo const* sProto = sSpellMgr->EnsureSpellInfo(itr->first); // Then get the SpellProto and add the dummy effect value
-					mod += CalculatePct(1.0f, sProto->Effects[1].CalcValue());
-                }
+				mod = 0.8f;
+				if (ToPet()->m_spells.find(SPELL_WILD_HUNT_1) != ToPet()->m_spells.end())
+					AddPct(mod, sSpellMgr->GetSpellInfo(SPELL_WILD_HUNT_1)->Effects[1].CalcValue());
+				else if (ToPet()->m_spells.find(SPELL_WILD_HUNT_2) != ToPet()->m_spells.end())
+					AddPct(mod, sSpellMgr->GetSpellInfo(SPELL_WILD_HUNT_2)->Effects[1].CalcValue());
             }
-
             bonusAP = owner->GetTotalAttackPowerValue(RANGED_ATTACK) * 0.25f * mod;
             SetBonusDamage(int32(owner->GetTotalAttackPowerValue(RANGED_ATTACK) * 0.317f * mod));
         }
@@ -1556,6 +1653,7 @@ float Guardian::GetMeleeCritFromAgility()
 {
     uint8 level = getLevel();
 	uint32 pclass = (getClass() - 1 == CLASS_MYSTIC) ? CLASS_MAGE : getClass() - 1;
+	//uint32 pclass = (getClass() - 1 == CLASS_MYSTIC) ? CLASS_MAGE : (getClass() - 1 == CLASS_REAPER) ? CLASS_ROGUE : getClass() - 1;
 
 	if (level > GT_MAX_LEVEL - 20)
 		level = GT_MAX_LEVEL - 20;
@@ -1573,6 +1671,7 @@ float Guardian::OCTRegenHPPerSpirit()
 {
     uint8 level = getLevel();
 	uint32 pclass = (getClass() - 1 == CLASS_MYSTIC) ? CLASS_MAGE : getClass() - 1;
+	//uint32 pclass = (getClass() - 1 == CLASS_MYSTIC) ? CLASS_MAGE : (getClass() - 1 == CLASS_REAPER) ? CLASS_ROGUE : getClass() - 1;
 
 	if (level > GT_MAX_LEVEL - 20)
 		level = GT_MAX_LEVEL - 20;
@@ -1596,6 +1695,7 @@ float Guardian::OCTRegenMPPerSpirit()
 {
     uint8 level = getLevel();
 	uint32 pclass = (getClass() - 1 == CLASS_MYSTIC) ? CLASS_MAGE : getClass() - 1;
+	//uint32 pclass = (getClass() - 1 == CLASS_MYSTIC) ? CLASS_MAGE : (getClass() - 1 == CLASS_REAPER) ? CLASS_ROGUE : getClass() - 1;
 
 	if (level > GT_MAX_LEVEL - 20)
 		level = GT_MAX_LEVEL - 20;

@@ -522,7 +522,7 @@ void WorldSession::HandleMovementOpcodes(WorldPacket& recvData)
                 if (movementInfo.time > plrMover->m_anti_LastSpeedChangeTime)
                 {
                     plrMover->m_anti_Last_HSpeed = current_speed;                                    // store current speed
-                    plrMover->m_anti_Last_VSpeed = -2.3f;
+                    plrMover->m_anti_Last_VSpeed = -8.0f;
                     plrMover->m_anti_LastSpeedChangeTime = 0;
                 }
                 // end calculating section

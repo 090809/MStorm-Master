@@ -28,6 +28,7 @@ void AddSC_generic_spell_scripts();
 void AddSC_hunter_spell_scripts();
 void AddSC_mage_spell_scripts();
 void AddSC_mystic_spell_scripts();
+//void AddSC_reaper_spell_scripts();
 void AddSC_paladin_spell_scripts();
 void AddSC_priest_spell_scripts();
 void AddSC_rogue_spell_scripts();
@@ -728,6 +729,7 @@ void AddSpellScripts()
 	AddSC_hunter_spell_scripts();
 	AddSC_mage_spell_scripts();
 	AddSC_mystic_spell_scripts();
+	//AddSC_reaper_spell_scripts();
 	AddSC_paladin_spell_scripts();
 	AddSC_priest_spell_scripts();
 	AddSC_rogue_spell_scripts();

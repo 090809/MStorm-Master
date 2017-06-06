@@ -910,8 +910,9 @@ public:
 				|| target->GetSpellHistory()->HasCooldown(200126) 
 				|| !roll_chance_i(absorbChance))
 				return;
-
-			target->DealDamage(dmgInfo.GetAttacker(), dmgInfo.GetDamage(), 0, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, sSpellMgr->GetSpellInfo(200126));
+			uint32 damage = dmgInfo.GetDamage() * 2; 
+			if (damage > CalculatePct(target->GetMaxHealth(), 30)) damage = CalculatePct(target->GetMaxHealth(), 30);
+			target->DealDamage(dmgInfo.GetAttacker(), damage, 0, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, sSpellMgr->GetSpellInfo(200126));
 
 			target->CastSpell(target, 200126, true);
 			target->GetSpellHistory()->AddCooldown(200126, 0, std::chrono::minutes(2));

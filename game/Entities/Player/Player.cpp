@@ -5679,7 +5679,7 @@ uint32 Player::GetShieldBlockValue() const
 float Player::GetMeleeCritFromAgility()
 {
     uint8 level = getLevel();
-	uint32 pclass = pclass = (getClass() - 1 == CLASS_MYSTIC) ? CLASS_MAGE : getClass() - 1;
+	uint32 pclass = (getClass() - 1 == CLASS_MYSTIC) ? CLASS_MAGE : (getClass() - 1 == CLASS_REAPER) ? CLASS_ROGUE : getClass() - 1;
 
 	if (level > GT_MAX_LEVEL - 20)
 		level = GT_MAX_LEVEL - 20;
@@ -5708,7 +5708,8 @@ void Player::GetDodgeFromAgility(float &diminishing, float &nondiminishing)
          0.036587f, // Mage
          0.024211f, // Warlock
 		 0.036587f, // Mystic
-         0.056097f  // Druid
+         0.056097f, // Druid
+		 0.020957f, // Rogue
     };
     // Crit/agility to dodge/agility coefficient multipliers; 3.2.0 increased required agility by 15%
     const float crit_to_dodge[MAX_CLASSES] =
@@ -5723,11 +5724,12 @@ void Player::GetDodgeFromAgility(float &diminishing, float &nondiminishing)
          1.00f/1.15f,    // Mage
          0.97f/1.15f,    // Warlock (?)
          1.00f/1.15f,    // Mystic
-         2.00f/1.15f     // Druid
+         2.00f/1.15f,	 // Druid
+		 2.00f/1.15f,    // Rogue
     };
 
     uint8 level = getLevel();
-	uint32 pclass = pclass = (getClass() - 1 == CLASS_MYSTIC) ? CLASS_MAGE : getClass() - 1;
+	uint32 pclass = (getClass() - 1 == CLASS_MYSTIC) ? CLASS_MAGE : (getClass() - 1 == CLASS_REAPER) ? CLASS_ROGUE : getClass() - 1;
 
 	if (level > GT_MAX_LEVEL - 20)
 		level = GT_MAX_LEVEL - 20;
@@ -5749,7 +5751,7 @@ void Player::GetDodgeFromAgility(float &diminishing, float &nondiminishing)
 float Player::GetSpellCritFromIntellect()
 {
     uint8 level = getLevel();
-	uint32 pclass = (getClass() - 1 == CLASS_MYSTIC) ? CLASS_MAGE : getClass() - 1;
+	uint32 pclass = (getClass() - 1 == CLASS_MYSTIC) ? CLASS_MAGE : (getClass() - 1 == CLASS_REAPER) ? CLASS_ROGUE : getClass() - 1;
 
     if (level > GT_MAX_LEVEL - 20)
         level = GT_MAX_LEVEL - 20;
@@ -5771,8 +5773,8 @@ float Player::GetRatingMultiplier(CombatRating cr) const
     if (level > GT_MAX_LEVEL - 20)
 		level = GT_MAX_LEVEL - 20;
 
-	int _class = (getClass() - 1 == CLASS_MYSTIC) ? CLASS_MAGE : getClass() - 1; //240 + 80 - 1 = 319
-    GtCombatRatingsEntry const* Rating = sGtCombatRatingsStore.LookupEntry(cr*GT_MAX_LEVEL+level-1); //14*80+80-1 = 1199, 131.767913818
+	int _class = (getClass() - 1 == CLASS_MYSTIC) ? CLASS_MAGE : (getClass() - 1 == CLASS_REAPER) ? CLASS_ROGUE : getClass() - 1;
+	GtCombatRatingsEntry const* Rating = sGtCombatRatingsStore.LookupEntry(cr*GT_MAX_LEVEL+level-1); //14*80+80-1 = 1199, 131.767913818
     // gtOCTClassCombatRatingScalarStore.dbc starts with 1, CombatRating with zero, so cr+1
 	GtOCTClassCombatRatingScalarEntry const* classRating = sGtOCTClassCombatRatingScalarStore.LookupEntry((_class)*GT_MAX_RATING + cr + 1);//8*32+14+1 = 271, 1
     if (!Rating || !classRating)
@@ -5804,7 +5806,7 @@ float Player::GetExpertiseDodgeOrParryReduction(WeaponAttackType attType) const
 float Player::OCTRegenHPPerSpirit()
 {
     uint8 level = getLevel();
-	uint32 pclass = pclass = (getClass() - 1 == CLASS_MYSTIC) ? CLASS_MAGE : getClass() - 1;
+	uint32 pclass = (getClass() - 1 == CLASS_MYSTIC) ? CLASS_MAGE : (getClass() - 1 == CLASS_REAPER) ? CLASS_ROGUE : getClass() - 1;
 
 	if (level > GT_MAX_LEVEL - 20)
 		level = GT_MAX_LEVEL - 20;
@@ -5827,7 +5829,8 @@ float Player::OCTRegenHPPerSpirit()
 float Player::OCTRegenMPPerSpirit()
 {
     uint8 level = getLevel();
-	uint32 pclass = pclass = (getClass() - 1 == CLASS_MYSTIC) ? CLASS_MAGE : getClass() - 1;
+	uint32 pclass = (getClass() - 1 == CLASS_MYSTIC) ? CLASS_MAGE : (getClass() - 1 == CLASS_REAPER) ? CLASS_ROGUE : getClass() - 1;
+
 
 	if (level > GT_MAX_LEVEL - 20)
 		level = GT_MAX_LEVEL - 20;
@@ -7197,7 +7200,8 @@ bool Player::RewardHonor(Unit* victim, uint32 groupsize, int32 honor, bool pvpto
 
     honor_f *= sWorld->getRate(RATE_HONOR);
     // Back to int now
-
+	if (HasAura(800013))
+		honor_f *= 1.15f;
 
     honor = int32(honor_f);
     // honor - for show honor points in log
@@ -7530,8 +7534,11 @@ void Player::UpdateZone(uint32 newZone, uint32 newArea)
 
     // remove items with area/map limitations (delete only for alive player to allow back in ghost mode)
     // if player resurrected at teleport this will be applied in resurrect code
-    if (IsAlive())
-        DestroyZoneLimitedItem(true, newZone);
+	if (IsAlive())
+	{
+		DestroyZoneLimitedItem(true, newZone);
+		RemoveBGItems();
+	}
 
     // check some item equip limitations (in result lost CanTitanGrip at talent reset, for example)
     AutoUnequipOffhandIfNeed();
@@ -12045,7 +12052,7 @@ InventoryResult Player::CanRollForItemInLFG(ItemTemplate const* proto, WorldObje
                 return EQUIP_ERR_CANT_DO_RIGHT_NOW;
         }
 
-        if (_class == CLASS_ROGUE || _class == CLASS_DRUID)
+        if (_class == CLASS_ROGUE || _class == CLASS_DRUID || _class == CLASS_REAPER)
             if (proto->SubClass != ITEM_SUBCLASS_ARMOR_LEATHER)
                 return EQUIP_ERR_CANT_DO_RIGHT_NOW;
 
@@ -12931,6 +12938,63 @@ void Player::DestroyZoneLimitedItem(bool update, uint32 new_zone)
         if (Item* pItem = GetItemByPos(INVENTORY_SLOT_BAG_0, i))
             if (pItem->IsLimitedToAnotherMapOrZone(GetMapId(), new_zone))
                 DestroyItem(INVENTORY_SLOT_BAG_0, i, update);
+}
+
+void Player::RemoveBGItems()
+{
+	if (GetMap()->IsBattlegroundOrArena())
+		return;
+
+	// Обновление шмотья 
+	for (uint8 i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; i++)
+		if (Item* pItem = GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+		{
+			if (pItem->IsEquipped())
+				_ApplyItemMods(pItem, i, false);
+			pItem->RemoveSavedEntry();
+			pItem->SendUpdateToPlayer(this);
+			if (pItem->IsEquipped())
+				_ApplyItemMods(pItem, i, true);
+		}
+
+	for (uint8 i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
+		if (Item* pItem = GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+		{
+			if (pItem->IsEquipped())
+				_ApplyItemMods(pItem, i, false);
+			pItem->RemoveSavedEntry();
+			pItem->SendUpdateToPlayer(this);
+			if (pItem->IsEquipped())
+				_ApplyItemMods(pItem, i, true);
+		}
+
+	// in inventory bags
+	for (uint8 i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
+		if (Bag* pBag = GetBagByPos(i))
+			for (uint32 j = 0; j < pBag->GetBagSize(); j++)
+				if (Item* pItem = pBag->GetItemByPos(j))
+				{
+					if (pItem->IsEquipped())
+						_ApplyItemMods(pItem, i, false);
+					pItem->RemoveSavedEntry();
+					pItem->SendUpdateToPlayer(this);
+					if (pItem->IsEquipped())
+						_ApplyItemMods(pItem, i, true);
+				}
+
+	// in equipment and bag list
+	for (uint8 i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_BAG_END; i++)
+		if (Item* pItem = GetItemByPos(INVENTORY_SLOT_BAG_0, i))
+		{
+			if (pItem->IsEquipped())
+				_ApplyItemMods(pItem, i, false);
+			
+			pItem->RemoveSavedEntry();
+			pItem->SendUpdateToPlayer(this);
+			
+			if (pItem->IsEquipped())
+				_ApplyItemMods(pItem, i, true);
+		}
 }
 
 void Player::DestroyConjuredItems(bool update)
@@ -18174,12 +18238,9 @@ Item* Player::_LoadItem(SQLTransaction& trans, uint32 zoneId, uint32 timeDiff, F
 {
     Item* item = NULL;
     uint32 itemGuid  = fields[13].GetUInt32();
-	uint32 itemEntry = fields[14].GetUInt32();
-	if (fields[15].GetUInt32() != 0)
-	{
-		itemEntry = fields[15].GetUInt32();
-		DeleteBGItems(itemEntry, itemGuid);
-	}
+
+	uint32 m_savedEntry = fields[15].GetUInt32();
+	uint32 itemEntry = m_savedEntry == 0 ? fields[14].GetUInt32() : m_savedEntry;
 
     if (ItemTemplate const* proto = sObjectMgr->GetItemTemplate(itemEntry))
     {
@@ -18187,6 +18248,8 @@ Item* Player::_LoadItem(SQLTransaction& trans, uint32 zoneId, uint32 timeDiff, F
         item = NewItemOrBag(proto);
         if (item->LoadFromDB(itemGuid, GetGUID(), fields, itemEntry))
         {
+			if (!GetMap()->IsBattlegroundOrArena())
+				item->RemoveSavedEntry(m_savedEntry);
             PreparedStatement* stmt = NULL;
 
             // Do not allow to have item limited to another map/zone in alive state
@@ -26742,67 +26805,51 @@ void Player::RemoveRestFlag(RestFlag restFlag)
     }
 }
 
-void Player::SaveBGItem(uint32 to_save, uint32 new_entry, uint32 GUIDlow)
-{
-	BGItems bgitem;
-	bgitem.SavedItemID = to_save;
-	bgitem.SavedItemGUID = GUIDlow;
-
-	SavedBGItems.push_back(bgitem);
-
-	int index = 0;
-	PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPDATE_BGS_ITEMS_TO_BACKUP);
-	stmt->setUInt32(index, to_save);
-	stmt->setUInt32(++index, new_entry);
-	stmt->setUInt32(++index, GUIDlow);
-	CharacterDatabase.Execute(stmt);
-}
-
-void Player::DeleteBGItems(uint32 saved_entry, uint32 GUIDlow)
-{
-	int index = 0;
-	PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPDATE_BGS_ITEMS_TO_BACKUP_DELETE);
-	stmt->setUInt32(index, saved_entry);
-	stmt->setUInt32(++index, GUIDlow);
-	CharacterDatabase.Execute(stmt);
-}
-
 void Player::ChangeEquipToHighLevelIfNeed(bool arena)
 {
-	return;
+	//if (!IsGameMaster())
+	//	return;
+	//Talk("Debug", CHAT_MSG_SAY, LANG_UNIVERSAL, 10, NULL);
 	std::vector<ItemChengerArray> ChangeArr;
-	PreparedStatement* statement;
-	QueryResult result = CharacterDatabase.PQuery("SELECT Position, ArenaOnly, id_1, id_2, id_3, id_4, id_5, id_6, id_7, id_8, id_9, id_10, ChangeTo FROM battleground_fake_change WHERE Class = 0 OR Class = %u ORDER BY Position ASC", getClass());
-	//return;
+
+	QueryResult result = CharacterDatabase.PQuery("SELECT ArenaOnly, id_1, id_2, id_3, id_4, id_5, id_6, id_7, id_8, id_9, id_10, ChangeTo FROM battleground_fake_change WHERE Class = 0 OR Class = %u ORDER BY Position ASC", getClass());
+	
 	if (result)
 	{
 		do {
 			ItemChengerArray Iter;
 			Field* res = result->Fetch();
-			/*
-			Iter.Class = getClass();
-			Iter.ArenaOnly = res[1].GetInt8();
 			
-			Iter.id_1 = res[2].GetUInt32();
-			Iter.id_2 = res[3].GetUInt32();
-			Iter.id_3 = res[4].GetUInt32();
-			Iter.id_4 = res[5].GetUInt32();
-			Iter.id_5 = res[6].GetUInt32();
-			Iter.id_6 = res[7].GetUInt32();
-			Iter.id_7 = res[8].GetUInt32();
-			Iter.id_8 = res[9].GetUInt32();
-			Iter.id_9 = res[10].GetUInt32();
-			Iter.id_10 = res[11].GetUInt32();
+			Iter.Class = getClass();
+			Iter.ArenaOnly = res[0].GetInt8();
 
-			Iter.ToChange = res[12].GetUInt32();
+			Iter.id_1 = res[1].GetUInt32();
+			Iter.id_2 = res[2].GetUInt32();
+			Iter.id_3 = res[3].GetUInt32();
+			Iter.id_4 = res[4].GetUInt32();
+			Iter.id_5 = res[5].GetUInt32();
+			Iter.id_6 = res[6].GetUInt32();
+			Iter.id_7 = res[7].GetUInt32();
+			Iter.id_8 = res[8].GetUInt32();
+			Iter.id_9 = res[9].GetUInt32();
+			Iter.id_10 = res[10].GetUInt32();
 
-			Iter.Position = GetItemByEntry(Iter.ToChange)->GetSlot();
+			Iter.ToChange = res[11].GetUInt32();
+
+			ItemTemplate const* iProto = sObjectMgr->GetItemTemplate(Iter.ToChange);
+			if (!iProto)
+				continue;
+
+			uint8 eslot = FindEquipSlot(iProto, NULL_SLOT, true);
+			Iter.Position = ((INVENTORY_SLOT_BAG_0 << 8) | eslot);
+
+			//Iter.Position = GetItemByEntry(Iter.ToChange)->GetSlot();
 
 			ChangeArr.push_back(Iter);
-			*/
 		} while (result->NextRow());
-	} else return;
-	return;
+	}
+	else return;
+
 	for (std::vector<ItemChengerArray>::const_iterator iter = ChangeArr.begin(); iter != ChangeArr.end(); ++iter)
 	{
 		ItemChengerArray ICA = (*iter);
@@ -26810,91 +26857,45 @@ void Player::ChangeEquipToHighLevelIfNeed(bool arena)
 		Item* item = GetItemByPos(INVENTORY_SLOT_BAG_0, pos);
 		
 		if (!item || !item->IsEquipped() || !(arena >= ICA.ArenaOnly))
-			break;
-
-		int k = 0;
-
-		for (k; k < 9; k++)
-			if (ICA[k] != 0 || item->GetEntry() == ICA[k])
-				break;
-		
-		if (k > 8)
-			continue; 
-		
-		SaveBGItem(item->GetEntry(), ICA.IdToChange(), item->GetGUIDLow());
-
-		_ApplyItemMods(item, pos, false);
-		item->SetEntry(ICA.IdToChange());
-		item->SendUpdateToPlayer(this);
-		_ApplyItemMods(item, pos, true);
-
-		m_player_changedbgitems = true;
-	}
-
-	return;
-	for (int i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; i++)
-	{
-		Item* item = GetItemByPos(INVENTORY_SLOT_BAG_0, i);
-
-		if (!item || !item->IsEquipped() || !(arena >= ChangeArr[i].ArenaOnly))
-			break;
-
-		int k = 0;
-
-		for (k; k < 9; k++)
-			if (item->GetEntry() == ChangeArr[i][k])
-				break;
-
-		if (k > 8)
 			continue;
 
-		SaveBGItem(item->GetEntry(), ChangeArr[i].IdToChange(), item->GetGUIDLow());
+		uint32 real_entry = 0;
 
-		_ApplyItemMods(item, i, false);
-		item->SetEntry(ChangeArr[i].IdToChange());
+		for (uint8 k = 1; k < 11; k++)
+			if (item->GetEntry() == ICA[k])
+				real_entry = item->GetEntry();
+		
+		if (real_entry == 0)
+			continue;
+
+		_ApplyItemMods(item, pos, false);
+		item->ChangeEntryInBG(ICA.IdToChange());
 		item->SendUpdateToPlayer(this);
-		_ApplyItemMods(item, i, true);
-
-		m_player_changedbgitems = true;
+		_ApplyItemMods(item, pos, true);
 	}
+	UpdateAllStats();
+	SetFullHealth();
 }
 
 void Player::ChangeBackItems() {
-	for (std::vector<BGItems>::const_iterator iter = SavedBGItems.begin(); iter != SavedBGItems.end(); ++iter) {
-		BGItems bgitems = (*iter);
-
-		Item* item = GetItemByGuid(ObjectGuid(HIGHGUID_ITEM, 0, bgitems.SavedItemGUID));
-		if (item && item->IsEquipped())
-		{
-			_ApplyItemMods(item, item->GetSlot(), false);
-			item->SetEntry(bgitems.SavedItemID);
-			item->SendUpdateToPlayer(this);
-			_ApplyItemMods(item, item->GetSlot(), true);
-
-			DeleteBGItems(bgitems.SavedItemID, item->GetGUIDLow());
-		}
-	}
+	RemoveBGItems();
 	UpdateAllStats();
-	SavedBGItems.empty();
-	m_player_changedbgitems = false;
 }
 
 void Player::LearnGuildSpells() {
 	std::vector<GuildTalentsSystem::TreeLevel> GuildTalents = sWorld->GetGuildTalentsSystem()->GetAllGuildTreeLevels();
+	
 	if (Guild* guild = GetGuild())
 	{
 		std::vector<GuildTalentsSystem::TreeLevelV> MyGuildTalents = guild->GetGuildTalents();
-		for (uint8 i = 0; i < GuildTalents.size(); i++)
+		for (uint8 i = 0; i < MyGuildTalents.size(); i++)
 		{
-			if (guild->GetMaxGuildTreeLevel() >= GuildTalents[i].tree_level)
-			{
-				for (uint8 j = 0; j < 3; j++)
-					if (j != MyGuildTalents[i]._talent_id - 1) { 
-						RemoveSpell(GuildTalents[i].spells[j]); 
-					} else { 
-						LearnSpell(GuildTalents[i].spells[j], false); 
-					}
-			}
+			for (uint8 j = 0; j < 3; j++)
+				if (j != MyGuildTalents[i]._talent_id - 1) { 
+					RemoveSpell(GuildTalents[MyGuildTalents[i]._tree_level - 1].spells[j]);
+				} else { 
+					LearnSpell(GuildTalents[MyGuildTalents[i]._tree_level - 1].spells[j], false);
+				}
 		}
 	}
 	else for (uint8 i = 0; i < GuildTalents.size(); i++)

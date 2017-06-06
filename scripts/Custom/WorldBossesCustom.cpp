@@ -31,6 +31,7 @@ EndScriptData */
 #include "SpellAuraEffects.h"
 #include "Containers.h"
 #include "SpellHistory.h"
+#include "GridNotifiersImpl.h"
 
 enum Spells {
 	SPELL_AURA_LESS_DAMAGE = 700000,
@@ -406,10 +407,309 @@ public:
 	};
 };
 
+enum SpellsDemEater {
+	SPELL_BERSERK_50 = 700096,
+	SPELL_DISARM,
+};
+
+enum EventsDemEater {
+	EVENT_BERSERK = 1,
+};
+
+enum TextsDemEater {
+	TEXT_BERSERK,
+	TEXT_TENTACLES,
+};
+
+class WorldBoss_DemEater : public CreatureScript
+{
+public:
+	WorldBoss_DemEater() : CreatureScript("WorldBoss_DemEater") { }
+
+	struct WorldBoss_DemEaterAI : public WorldBossAI
+	{
+		WorldBoss_DemEaterAI(Creature* creature) : WorldBossAI(creature)
+		{
+			Initialize();
+		}
+
+		void Initialize()
+		{
+			if (!me->HasAura(SPELL_AURA_LESS_DAMAGE))
+				me->AddAura(SPELL_AURA_LESS_DAMAGE, me);
+			health_90 = health_80 = health_70 = health_60 = health_50 = health_40 = health_30 = health_20 = health_10 = false;
+		};
+
+		void JustDied(Unit* /*killer*/) override {
+			_JustDied();
+		}
+
+		void EnterCombat(Unit* /*who*/) override
+		{
+			_EnterCombat();
+			if (!me->HasAura(SPELL_AURA_LESS_DAMAGE))
+				me->AddAura(SPELL_AURA_LESS_DAMAGE, me);
+			events.ScheduleEvent(EVENT_BERSERK, 100 * IN_MILLISECONDS);
+		}
+
+		void ExecuteEvent(uint32 eventId) override
+		{
+			switch (eventId)
+			{
+			case EVENT_BERSERK:
+				Talk(TEXT_BERSERK);
+				std::list<Player*> targets;
+				Trinity::AnyPlayerInObjectRangeCheck u_check(me, 100.0f);
+				Trinity::PlayerListSearcher<Trinity::AnyPlayerInObjectRangeCheck> searcher(me, targets, u_check);
+				me->VisitNearbyObject(100.0f, searcher);
+				for (std::list<Player*>::const_iterator iter = targets.begin(); iter != targets.end(); ++iter)
+					if ((*iter)->IsAlive())
+						me->AddAura(SPELL_DISARM, (*iter));
+				
+				events.ScheduleEvent(EVENT_BERSERK, 100 * IN_MILLISECONDS);
+				break;
+			}
+		}
+
+		void DamageTaken(Unit* /*done_by*/, uint32& damage) override
+		{
+			if (HealthBelowPct(90) && !health_90) {
+				_SummonTentacles(1);
+				health_90 = true;
+			}
+			if (HealthBelowPct(80) && !health_80) {
+				_SummonTentacles(1);
+				health_80 = true;
+			}
+			if (HealthBelowPct(70) && !health_70) {
+				_SummonTentacles(1);
+				health_70 = true;
+			}
+			if (HealthBelowPct(60) && !health_60) {
+				_SummonTentacles(2);
+				health_60 = true;
+			}
+			if (HealthBelowPct(50) && !health_50) {
+				_SummonTentacles(2);
+				health_50 = true;
+			}
+			if (HealthBelowPct(40) && !health_40) {
+				_SummonTentacles(2);
+				health_40 = true;
+			}
+			if (HealthBelowPct(30) && !health_30) {
+				_SummonTentacles(3);
+				health_30 = true;
+			}
+			if (HealthBelowPct(20) && !health_20) {
+				_SummonTentacles(3);
+				health_20 = true;
+			}
+			if (HealthBelowPct(10) && !health_10) {
+				_SummonTentacles(3);
+				health_10 = true;
+			}
+		}
+
+		void _SummonTentacles(uint8 counter) {
+			Talk(TEXT_TENTACLES);
+			std::list<Player*> targets;
+			Trinity::AnyPlayerInObjectRangeCheck u_check(me, 100.0f);
+			Trinity::PlayerListSearcher<Trinity::AnyPlayerInObjectRangeCheck> searcher(me, targets, u_check);
+			me->VisitNearbyObject(100.0f, searcher);
+
+			for (uint8 i = 0; i < counter; i++)
+				for (std::list<Player*>::const_iterator iter = targets.begin(); iter != targets.end(); ++iter)
+					if ((*iter)->IsAlive())
+					{
+						Creature* sum = me->SummonCreature(596601, (*iter)->GetPosition(), TEMPSUMMON_DEAD_DESPAWN);
+						JustSummoned(sum);
+						sum->AI()->AttackStart((*iter));
+						me->AddAura(700000, sum);
+					}
+				
+		}
+
+		bool health_90, health_80, health_70, health_60, health_50, health_40, health_30, health_20, health_10;
+	};
+
+	CreatureAI* GetAI(Creature* creature) const override
+	{
+		return new WorldBoss_DemEaterAI(creature);
+	}
+};
+
+
+enum PyromaniacEnum
+{
+	EVENT_SPELL_BIGFIREBOLT = 1,
+	EVENT_SPELL_SCORGE,
+	EVENT_FIRE_CHARGE,
+	EVENT_PHASE_2,
+
+	EVENT_SPELL_BIGFIREBOLT_2,
+	EVENT_SPELL_SCORGE_2,
+	EVENT_FIRE_ARMOR_PROC,
+	EVENT_SPELL_FIRE_BOMB,
+
+	SPELL_BIGFIREBOLT = 700100,
+	SPELL_SCORGE,
+	SPELL_FIRE_CHARGE,
+	SPELL_FIRE_CHARGE_AURA,
+	SPELL_FIRE_AREA_PROC,
+	SPELL_FIRE_ARMOR,
+	SPELL_FIRE_ARMOR_PROC,
+	SPELL_FIRE_BOMB,
+	SPELL_FIRE_SEED,
+};
+
+class WorldBoss_Pyromaniac : public CreatureScript
+{
+public:
+	WorldBoss_Pyromaniac() : CreatureScript("WorldBoss_Pyromaniac") { }
+
+	struct WorldBoss_PyromaniacAI : public WorldBossAI
+	{
+		WorldBoss_PyromaniacAI(Creature* creature) : WorldBossAI(creature)
+		{
+			Initialize();
+		}
+
+		void Initialize()
+		{
+			if (!me->HasAura(SPELL_AURA_LESS_DAMAGE))
+				me->AddAura(SPELL_AURA_LESS_DAMAGE, me);
+			events.SetPhase(0);
+		};
+
+		void JustDied(Unit* /*killer*/) override {
+			_JustDied();
+		}
+
+		void EnterCombat(Unit* /*who*/) override
+		{
+			_EnterCombat();
+			if (!me->HasAura(SPELL_AURA_LESS_DAMAGE))
+				me->AddAura(SPELL_AURA_LESS_DAMAGE, me);
+			events.SetPhase(1);
+			events.ScheduleEvent(EVENT_SPELL_BIGFIREBOLT, urand(4000, 6000), 0, 1);
+			events.ScheduleEvent(EVENT_SPELL_SCORGE, urand(3500, 5000), 0, 1);
+			events.ScheduleEvent(EVENT_FIRE_CHARGE, 18000, 0, 1);
+			events.ScheduleEvent(EVENT_PHASE_2, 200000, 0, 1);
+		}
+
+		void SetPhase(uint32 phaseId)
+		{
+			events.SetPhase(phaseId);
+			switch (phaseId)
+			{
+			case 2:
+				events.ScheduleEvent(EVENT_SPELL_BIGFIREBOLT_2, urand(4000, 6000), 0, 2);
+				events.ScheduleEvent(EVENT_SPELL_SCORGE_2, urand(3500, 5000), 0, 2);
+				events.ScheduleEvent(EVENT_FIRE_ARMOR_PROC, 3000, 0, 2);
+				phase_2_health = me->GetHealthPct();
+				
+				DoCast(SPELL_FIRE_ARMOR); //Visual
+				break;
+			}
+		}
+
+		void ExecuteEvent(uint32 eventId) override
+		{
+			switch (eventId)
+			{
+			case EVENT_SPELL_BIGFIREBOLT:
+				DoCast(SPELL_BIGFIREBOLT);
+				events.ScheduleEvent(EVENT_SPELL_BIGFIREBOLT, urand(6000, 9000), 0, 1);
+				break;
+			case EVENT_SPELL_SCORGE:
+				DoCast(SPELL_SCORGE);
+				events.ScheduleEvent(EVENT_SPELL_SCORGE, urand(3500, 5000), 0, 1);
+				break;
+			case EVENT_FIRE_CHARGE:
+				DoCast(SPELL_FIRE_CHARGE);
+				events.ScheduleEvent(EVENT_FIRE_CHARGE, 18000, 0, 1);
+				break;
+			case EVENT_PHASE_2:
+				SetPhase(2);
+				break;
+
+			case EVENT_SPELL_BIGFIREBOLT_2:
+			{
+				Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO, 0);
+				DoCast(target, SPELL_BIGFIREBOLT);
+				DoCast(target, SPELL_FIRE_AREA_PROC, true);
+				events.ScheduleEvent(EVENT_SPELL_BIGFIREBOLT_2, urand(6000, 9000), 0, 2);
+				break;
+			}
+			case EVENT_SPELL_SCORGE_2:
+			{	
+				Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO, 0);
+				DoCast(target, SPELL_SCORGE);
+				DoCast(target, SPELL_FIRE_AREA_PROC, true);
+				events.ScheduleEvent(EVENT_SPELL_SCORGE_2, urand(3500, 5000), 0, 2);
+				break;
+			}
+			case EVENT_FIRE_ARMOR_PROC:
+				{
+					std::list<Player*> targets;
+					Trinity::AnyPlayerInObjectRangeCheck u_check(me, 100.0f);
+					Trinity::PlayerListSearcher<Trinity::AnyPlayerInObjectRangeCheck> searcher(me, targets, u_check);
+					me->VisitNearbyObject(60.0f, searcher);
+					for (std::list<Player*>::iterator iter = targets.begin(); iter != targets.end(); ++iter)
+						if ((*iter)->IsAlive() && !(*iter)->IsGameMaster())
+						{
+							float value = me->GetDistance((*iter)->GetPosition());
+							uint32 st_damage = 18500000;
+							const int32 _value = value > 50 ? 0 :
+								value < 10 ? st_damage :
+								st_damage / 40 * (50 - value);
+							me->CastCustomSpell((*iter), (uint32)SPELL_FIRE_ARMOR_PROC, &_value, NULL, NULL, true);
+						}
+					events.ScheduleEvent(EVENT_FIRE_ARMOR_PROC, 3000, 0, 2);
+				}
+				break;
+			case EVENT_SPELL_FIRE_BOMB:
+				DoCast(SelectTarget(SELECT_TARGET_RANDOM, 0), SPELL_FIRE_BOMB);
+				break;
+			}
+		}
+
+		void SpellHit(Unit* caster, SpellInfo const* spell) override 
+		{ 
+			if (caster != me)
+				return;
+			if (spell->Id == SPELL_FIRE_CHARGE)
+			{
+				me->AddAura(SPELL_FIRE_CHARGE_AURA, me);
+
+				if (me->GetAuraCount(SPELL_FIRE_CHARGE_AURA) > 9)
+					SetPhase(2);
+			}
+		}
+
+		void DamageTaken(Unit* /*done_by*/, uint32& damage) override
+		{
+			if (events.IsInPhase(2) && HealthBelowPct(phase_2_health / 2))
+				SetPhase(3);
+		}
+
+		float phase_2_health;
+
+	};
+
+	CreatureAI* GetAI(Creature* creature) const override
+	{
+		return new WorldBoss_PyromaniacAI(creature);
+	}
+};
+
 void AddSC_Custom_World_Bosses()
 {
 	new WorldBoss_Shtorm();
 	new WorldBoss_SpiderMan();
 	new WorldBoss_SpiderMan_Minion_Spider();
 	new spell_world_boss_healing_attacks();
+	new WorldBoss_DemEater();
+	new WorldBoss_Pyromaniac();
 }

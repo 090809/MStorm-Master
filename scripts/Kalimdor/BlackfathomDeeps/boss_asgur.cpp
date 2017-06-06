@@ -35,6 +35,8 @@ enum Spells
 	SPELL_AURA_DEMONIC = 60449,
 	SPELL_BERSERK = 700077,
 	SPELL_TORTURE = 700076,
+	SPELL_SHADOW_WORD_PAIN = 72319,
+	SPELL_SHADOW_BOMB = 32325,
 
 	SPELL_RIDE_VEHICLE = 46598,
 
@@ -49,7 +51,9 @@ enum Phases {
 enum Events
 {
 	EVENT_IMPALE = 1,
-	EVENT_TORTURE
+	EVENT_TORTURE,
+	EVENT_SWP,
+	EVENT_SWB
 };
 
 enum NPCS
@@ -124,6 +128,14 @@ public:
 				DoCast(SPELL_TORTURE);
 				events.ScheduleEvent(EVENT_TORTURE, urand(28000, 31000));
 				break;
+			case EVENT_SWP:
+				DoCast(SelectTarget(SELECT_TARGET_RANDOM, 0), SPELL_SHADOW_WORD_PAIN);
+				events.ScheduleEvent(EVENT_SWP, urand(6000, 9000));
+				break;
+			case EVENT_SWB:
+				DoCast(SelectTarget(SELECT_TARGET_RANDOM, 0), SPELL_SHADOW_BOMB);
+				events.ScheduleEvent(EVENT_SWB, urand(7000, 12000));
+				break;
 			}
 		}
 
@@ -132,6 +144,8 @@ public:
 			if (me->HealthBelowPct(71) && events.IsInPhase(PHASE_ONE))
 			{
 				me->AddAura(SPELL_AURA_DEMONIC, me);
+				events.ScheduleEvent(EVENT_SWP, urand(1000, 2000));
+				events.ScheduleEvent(EVENT_SWB, urand(4000, 7000));
 				events.ScheduleEvent(EVENT_TORTURE, urand(18000, 25000));
 				events.SetPhase(PHASE_TWO);
 			} else if (me->HealthBelowPct(11) && events.IsInPhase(PHASE_TWO))

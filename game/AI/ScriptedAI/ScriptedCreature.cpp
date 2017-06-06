@@ -625,7 +625,7 @@ void BossAI::GiveRewardPoints()
 		Player* player = (*iter);
 		Rewarder.player = player;
 		
-		QueryResult CountOfInstance = CharacterDatabase.PQuery("SELECT count_of_instance FROM instance_reward_data WHERE instance_id = %u AND player_id = %u", me->GetInstanceId(), player->GetGUIDLow());
+		QueryResult CountOfInstance = CharacterDatabase.PQuery("SELECT count_of_instance FROM instance_reward_data WHERE instance_id = %u AND player_id = %u", me->GetInstanceScript()->instance->GetId(), player->GetGUIDLow());
 		if (CountOfInstance)
 		{
 			Field *fields = CountOfInstance->Fetch();

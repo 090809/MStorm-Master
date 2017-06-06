@@ -1209,8 +1209,8 @@ bool Guild::Create(Player* pLeader, std::string const& name)
 	
 	//Guild-Level-System
 	LoadLevelInfo();
-	LoadTalentsInfo();
 	MaxGuildTreeLevel = 0;
+	LoadTalentsInfo();
     return ret;
 }
 
@@ -1965,8 +1965,8 @@ bool Guild::LoadFromDB(Field* fields)
 
 	//Guild-Level-System
 	LoadLevelInfo();
-	LoadTalentsInfo();
 	MaxGuildTreeLevel = 0;
+	LoadTalentsInfo();
     return true;
 }
 
@@ -2983,20 +2983,24 @@ void Guild::LoadTalentsInfo()
 		{
 			Field* fields = result->Fetch();
 			m_TreeLevelVector.push_back(GuildTalentsSystem::TreeLevelV(fields[0].GetUInt32(), fields[1].GetUInt32()));
+			if (!MaxGuildTreeLevel || fields[0].GetUInt32() > MaxGuildTreeLevel)
+				MaxGuildTreeLevel = fields[0].GetUInt32();
 		} while (result->NextRow());
 	}
-	MaxGuildTreeLevel = m_TreeLevelVector.size();
 	uint8 MaxGuildTreeLevelAfterLoad = MaxGuildTreeLevel;
 
 	//Вдруг уровень гильдии изменился, а новые таланты не добавились? Не хорошо получается.
 	for (uint8 i = 0; i < maxtalents.size(); i++)
-		if (maxtalents[i].required_guild_level <= GetGuildLevel() && maxtalents[i].tree_level < MaxGuildTreeLevel)
+		if (maxtalents[i].required_guild_level <= GetGuildLevel() && maxtalents[i].tree_level >= MaxGuildTreeLevel)
+		{
 			m_TreeLevelVector.push_back(GuildTalentsSystem::TreeLevelV(maxtalents[i].tree_level, 0));
+			MaxGuildTreeLevel = maxtalents[i].tree_level;
+		}
 
-	MaxGuildTreeLevel = m_TreeLevelVector.size();
 	if (MaxGuildTreeLevelAfterLoad != MaxGuildTreeLevel)
-		for (uint8 i = MaxGuildTreeLevelAfterLoad - 1; i < m_TreeLevelVector.size(); i++)
-			CharacterDatabase.AsyncPQuery("INSERT INTO guild_talents (guild_id, tree_level, talent_id) VALUES (%u, %u, %u)", GetId(), m_TreeLevelVector[i]._tree_level, 0);
+		for (uint8 i = 0; i < m_TreeLevelVector.size(); i++)
+			if (MaxGuildTreeLevelAfterLoad < m_TreeLevelVector[i]._tree_level)
+				CharacterDatabase.PQuery("INSERT INTO guild_talents (guild_id, tree_level, talent_id) VALUES (%u, %u, %u)", GetId(), m_TreeLevelVector[i]._tree_level, 0);
 	
 	if (m_TreeLevelVector.size() > 1)
 		std::sort(m_TreeLevelVector.begin(), m_TreeLevelVector.end(), sWorld->GetGuildTalentsSystem()->TreeLevelVSorter);
@@ -3004,9 +3008,14 @@ void Guild::LoadTalentsInfo()
 
 void Guild::UpdateTalentsInfo()
 {
-	m_TreeLevelVector.push_back(GuildTalentsSystem::TreeLevelV(MaxGuildTreeLevel, 0));
-	CharacterDatabase.AsyncPQuery("INSERT INTO guild_talents (guild_id, tree_level, talent_id) VALUES (%u, %u, %u)", GetId(), MaxGuildTreeLevel, 0);
-	MaxGuildTreeLevel++;
+	std::vector<GuildTalentsSystem::TreeLevel> maxtalents = sWorld->GetGuildTalentsSystem()->GetAllGuildTreeLevels();
+	for (uint8 i = 0; i < maxtalents.size(); i++)
+		if (maxtalents[i].required_guild_level == GetGuildLevel())
+		{
+			m_TreeLevelVector.push_back(GuildTalentsSystem::TreeLevelV(maxtalents[i].tree_level, 0));
+			CharacterDatabase.PQuery("INSERT INTO guild_talents (guild_id, tree_level, talent_id) VALUES (%u, %u, %u)", GetId(), maxtalents[i].tree_level, 0);
+			MaxGuildTreeLevel = maxtalents[i].tree_level;
+		}
 }
 
 bool Guild::HasLevelForBonus(uint8 guildBonus)
@@ -3085,19 +3094,25 @@ void Guild::SetLevel(uint8 level, bool byCommand)
 void Guild::UpdateSpellsOnlinePlayers()
 {
 	for (Members::iterator itr = m_members.begin(); itr != m_members.end(); ++itr)
-		itr->second->FindConnectedPlayer()->LearnGuildSpells();
+		if (Player* pl = itr->second->FindConnectedPlayer())
+			pl->LearnGuildSpells();
 }
 
 uint16 Guild::GetTalentID(uint32 TreeLevel)
 {
 	for (uint8 i = 0; i < m_TreeLevelVector.size(); i++)
-		if (m_TreeLevelVector[i]._tree_level == TreeLevel) return m_TreeLevelVector[i]._talent_id;
+		if (m_TreeLevelVector[i]._tree_level == TreeLevel) 
+			return m_TreeLevelVector[i]._talent_id;
+	return 0;
 }
 
 void Guild::SetGuildTalent(uint32 TreeLevel, uint32 TalentId)
 {
 	for (uint8 i = 0; i < m_TreeLevelVector.size(); i++)
-		if (m_TreeLevelVector[i]._tree_level == TreeLevel) m_TreeLevelVector[i]._talent_id = TalentId;
+		if (m_TreeLevelVector[i]._tree_level == TreeLevel) { 
+			m_TreeLevelVector[i]._talent_id = TalentId; 
+			CharacterDatabase.PQuery("REPLACE INTO guild_talents (guild_id, tree_level, talent_id) VALUES (%u, %u, %u)", GetId(), m_TreeLevelVector[i]._tree_level, m_TreeLevelVector[i]._talent_id);
+	}
 	UpdateSpellsOnlinePlayers();
 }
 //Guild-Level-System [End]

@@ -1,4 +1,4 @@
-/*
+﻿/*
 *
 * Copyright (C) 2013 Emu-Devstore <http://emu-devstore.com/>
 * Written by Teiby <http://www.teiby.de/>
@@ -148,7 +148,7 @@ public:
 		sArenaTeamMgr->AddArenaTeam(arenaTeam);
 		arenaTeam->AddMember(player->GetGUID());
 
-		ChatHandler(player->GetSession()).SendSysMessage("1v1 Arenateam successful created!");
+		ChatHandler(player->GetSession()).SendSysMessage("Команда арены 1х1 успешно создана!");
 
 		return true;
 	}
@@ -161,26 +161,26 @@ public:
 
 		if (sWorld->getBoolConfig(CONFIG_ARENA_1V1_ENABLE) == false)
 		{
-			ChatHandler(player->GetSession()).SendSysMessage("1v1 disabled!");
+			ChatHandler(player->GetSession()).SendSysMessage("1х1 Арена выключена!");
 			return true;
 		}
 
 		if (player->InBattlegroundQueueForBattlegroundQueueType(BATTLEGROUND_QUEUE_5v5))
-			player->ADD_GOSSIP_ITEM_EXTENDED(GOSSIP_ICON_CHAT, "Leave queue 1v1 Arena", GOSSIP_SENDER_MAIN, 3, "Are you sure?", 0, false);
+			player->ADD_GOSSIP_ITEM_EXTENDED(GOSSIP_ICON_CHAT, "Покинуть поиск 1х1 игры", GOSSIP_SENDER_MAIN, 3, "Вы уверены?", 0, false);
 		else
-			player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, "Sign up 1v1 Arena (unrated)", GOSSIP_SENDER_MAIN, 20);
+			player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, "Поиск 1х1 арены (тренировка)", GOSSIP_SENDER_MAIN, 20);
 
 		if (player->GetArenaTeamId(ArenaTeam::GetSlotByType(ARENA_TEAM_5v5)) == 0)
-			player->ADD_GOSSIP_ITEM_EXTENDED(GOSSIP_ICON_CHAT, "Create new 1v1 Arenateam", GOSSIP_SENDER_MAIN, 1, "Create 1v1 arenateam?", sWorld->getIntConfig(CONFIG_ARENA_1V1_COSTS), false);
+			player->ADD_GOSSIP_ITEM_EXTENDED(GOSSIP_ICON_CHAT, "Создать команду арены 1х1", GOSSIP_SENDER_MAIN, 1, "Уверены?", sWorld->getIntConfig(CONFIG_ARENA_1V1_COSTS), false);
 		else
 		{
 			if (player->InBattlegroundQueueForBattlegroundQueueType(BATTLEGROUND_QUEUE_5v5) == false)
 			{
-				player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, "Sign up 1v1 Arena (rated)", GOSSIP_SENDER_MAIN, 2);
-				player->ADD_GOSSIP_ITEM_EXTENDED(GOSSIP_ICON_CHAT, "Disband arenateam", GOSSIP_SENDER_MAIN, 5, "Are you sure?", 0, false);
+				player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, "Поиск 1х1 арены (рейтинговый подбор)", GOSSIP_SENDER_MAIN, 2);
+				player->ADD_GOSSIP_ITEM_EXTENDED(GOSSIP_ICON_CHAT, "Покинуть команду 1х1", GOSSIP_SENDER_MAIN, 5, "Вы уверены?", 0, false);
 			}
 
-			player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, "Show statistics", GOSSIP_SENDER_MAIN, 4);
+			player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, "Показать статистику", GOSSIP_SENDER_MAIN, 4);
 		}
 
 		//player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, "Script Info", GOSSIP_SENDER_MAIN, 8);
@@ -208,7 +208,7 @@ public:
 			}
 			else
 			{
-				ChatHandler(player->GetSession()).PSendSysMessage("You need level %u+ to create an 1v1 arenateam.", sWorld->getIntConfig(CONFIG_ARENA_1V1_MIN_LEVEL));
+				ChatHandler(player->GetSession()).PSendSysMessage("Вам нужен %u+ уровень, что бы создать команду 1х1 арены.", sWorld->getIntConfig(CONFIG_ARENA_1V1_MIN_LEVEL));
 				player->CLOSE_GOSSIP_MENU();
 				return true;
 			}
@@ -218,7 +218,7 @@ public:
 		case 2: // Join Queue Arena (rated)
 		{
 			if (Arena1v1CheckTalents(player) && JoinQueueArena(player, me, true) == false)
-				ChatHandler(player->GetSession()).SendSysMessage("Something went wrong while join queue.");
+				ChatHandler(player->GetSession()).SendSysMessage("Что-то пошло не так, при присоединении к поиску...");
 
 			player->CLOSE_GOSSIP_MENU();
 			return true;
@@ -228,7 +228,7 @@ public:
 		case 20: // Join Queue Arena (unrated)
 		{
 			if (Arena1v1CheckTalents(player) && JoinQueueArena(player, me, false) == false)
-				ChatHandler(player->GetSession()).SendSysMessage("Something went wrong while join queue.");
+				ChatHandler(player->GetSession()).SendSysMessage("Что-то пошло не так, при присоединении к поиску...");
 
 			player->CLOSE_GOSSIP_MENU();
 			return true;
@@ -251,12 +251,12 @@ public:
 			if (at)
 			{
 				std::stringstream s;
-				s << "Rating: " << at->GetStats().Rating;
-				s << "\nRank: " << at->GetStats().Rank;
-				s << "\nSeason Games: " << at->GetStats().SeasonGames;
-				s << "\nSeason Wins: " << at->GetStats().SeasonWins;
-				s << "\nWeek Games: " << at->GetStats().WeekGames;
-				s << "\nWeek Wins: " << at->GetStats().WeekWins;
+				s << "Рейтинг: " << at->GetStats().Rating;
+				s << "\nРанк: " << at->GetStats().Rank;
+				s << "\nИгр в сезоне: " << at->GetStats().SeasonGames;
+				s << "\nПобед в сезоне: " << at->GetStats().SeasonWins;
+				s << "\nИгр за неделю: " << at->GetStats().WeekGames;
+				s << "\nПобед за неделю: " << at->GetStats().WeekWins;
 
 				ChatHandler(player->GetSession()).PSendSysMessage(s.str().c_str());
 			}
@@ -269,7 +269,7 @@ public:
 			WorldPacket Data;
 			Data << (uint32)player->GetArenaTeamId(ArenaTeam::GetSlotByType(ARENA_TEAM_5v5));
 			player->GetSession()->HandleArenaTeamLeaveOpcode(Data);
-			ChatHandler(player->GetSession()).SendSysMessage("Arenateam deleted!");
+			ChatHandler(player->GetSession()).SendSysMessage("Команда арены удалена!");
 			player->CLOSE_GOSSIP_MENU();
 			return true;
 		}

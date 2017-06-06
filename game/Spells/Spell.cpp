@@ -2371,7 +2371,7 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
             procEx |= PROC_EX_NORMAL_HIT;
 
         int32 gain = caster->HealBySpell(unitTarget, m_spellInfo, addhealth, crit);
-        unitTarget->getHostileRefManager().threatAssist(caster, float(gain) * 0.5f, m_spellInfo);
+        unitTarget->getHostileRefManager().threatAssist(caster, float(gain) * 0.05f, m_spellInfo);
         m_healing = gain;
 
         // Do triggers for unit (reflect triggers passed on hit phase for correct drop charge)
@@ -5627,7 +5627,7 @@ SpellCastResult Spell::CheckCasterAuras() const
                 dispel_immune |= SpellInfo::GetDispelMask(DispelType(m_spellInfo->Effects[i].MiscValue));
         }
         // immune movement impairment and loss of control
-        if (m_spellInfo->Id == 42292 || m_spellInfo->Id == 59752 || m_spellInfo->Id == 19574)
+        if (m_spellInfo->Id == 42292 || m_spellInfo->Id == 800110 || m_spellInfo->Id == 19574)
             mechanic_immune = IMMUNE_TO_MOVEMENT_IMPAIRMENT_AND_LOSS_CONTROL_MASK;
     }
 

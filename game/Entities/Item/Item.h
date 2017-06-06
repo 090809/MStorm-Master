@@ -347,6 +347,8 @@ class Item : public Object
         void SetSoulboundTradeable(AllowedLooterSet const& allowedLooters);
         void ClearSoulboundTradeable(Player* currentOwner);
         bool CheckSoulboundTradeExpire();
+		void ChangeEntryInBG(uint32 entry, bool update = true);
+		void RemoveSavedEntry(uint32 _m_savedEntry = 0);
 
         void BuildUpdate(UpdateDataMapType&) override;
 
@@ -363,5 +365,6 @@ class Item : public Object
         uint32 m_paidMoney;
         uint32 m_paidExtendedCost;
         AllowedLooterSet allowedGUIDs;
+		uint32 m_savedEntry;
 };
 #endif

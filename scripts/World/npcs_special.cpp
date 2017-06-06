@@ -44,8 +44,9 @@ EndContentData */
 #include "ScriptedCreature.h"
 #include "ScriptedGossip.h"
 #include "ScriptedEscortAI.h"
-#include "ObjectMgr.h"
 #include "ScriptMgr.h"
+#include "Common.h"
+#include "ObjectMgr.h"
 #include "World.h"
 #include "PassiveAI.h"
 #include "GameEventMgr.h"
@@ -2335,6 +2336,55 @@ enum LandroMenus
 	WELCOME = 8855,
 };
 
+class teleport_master : public CreatureScript
+{
+public:
+	teleport_master() : CreatureScript("teleport_master") {
+	};
+
+	bool OnGossipSelect(Player* player, Creature* creature, uint32 sender, uint32 action) override
+	{
+		if (action != 48505)
+		{
+			player->PrepareGossipMenu(creature, action, true);
+			player->SendPreparedGossip(creature);
+		}
+		else {
+			std::vector<uint32> WorldBosses;
+			WorldBosses.push_back(297363);
+			WorldBosses.push_back(297337);
+
+			std::vector<std::string> msgs;
+			for (uint16 i = 0; i < WorldBosses.size(); i++)
+			{
+				std::string msg;
+				if (CreatureData const* cr_data = sObjectMgr->GetCreatureData(WorldBosses[i]))
+				{
+					Creature* unit = player->GetMap()->GetCreature(ObjectGuid(HIGHGUID_UNIT, cr_data->id, uint32(WorldBosses[i])));
+					time_t _time = unit->GetRespawnTimeEx() - time(NULL);
+					if (_time == 0)
+					{
+						msg = "[Жив]";
+					}
+					else
+					{
+						uint16 hours = _time / (HOUR * IN_MILLISECONDS);
+						uint16 minutes = (_time - hours * (HOUR * IN_MILLISECONDS)) / (MINUTE * IN_MILLISECONDS);
+						msg = "[Воскреснет через:" + std::to_string(hours) + " ч. " + std::to_string(minutes) + " мин.]";
+					}
+				}
+				else msg = "[Неизвестно]";
+				msgs.push_back(msg);
+			}
+
+			player->ADD_GOSSIP_ITEM_EXTENDED(GOSSIP_ICON_CHAT, "|TInterface/ICONS/Achievement_boss_1murmur:30|t Вестник Бури " + msgs[0], 48505, GOSSIP_ACTION_INFO_DEF + 1, "Телепортироваться к Вестнику Бури?", 0, false);
+			player->ADD_GOSSIP_ITEM_EXTENDED(GOSSIP_ICON_CHAT, "|TInterface/ICONS/Achievement_boss_thaddius:30|t Таддиус Адский Вопль " + msgs[1], 48505, GOSSIP_ACTION_INFO_DEF + 2, "Телепортироваться к Таддиусу Адскому Воплю?", 0, false);
+			player->SEND_GOSSIP_MENU(player->GetGossipTextId(creature), creature->GetGUID());
+		}
+		return true;	
+	}
+};
+
 class landro_longshot : public CreatureScript
 {
 public:
@@ -2659,12 +2709,13 @@ public:
 
 		void EnterCombat(Unit* who) override
 		{
-			player = who;
+			player = who->GetCharmerOrOwnerPlayerOrPlayerItself();
 			me->SetSpeed(MOVE_RUN, 0, true);
 			events.ScheduleEvent(T_EVENT_TELEPORTATION, 35000);
 			events.ScheduleEvent(T_EVENT_DEAL_DAMAGE, 1000);
 			me->AddAura(T_SPELL_SAFE_ZONE, me);
 			me->AddAura(T_SPELL_SAFE_ZONE_V, me);
+			me->AddAura(700000, me);
 			me->AddAura(T_AURA_NO_HEAL, player);
 		}
 
@@ -2691,49 +2742,41 @@ public:
 			}
 		}
 
-		void DamageTaken(Unit* /*attacker*/, uint32& damage) override
+		void JustDied(Unit* killer) override
 		{
-			if (me->GetHealth() <= damage)
+			if (player->ToPlayer())
 			{
-				damage = 0;
-				me->SetFullHealth();
-				if (player->ToPlayer())
-				{
-					player->ToPlayer()->AddItem(775500, 1);
-					player->ToPlayer()->AddItem(775501, 1);
-				}
-				DoCast(27802);
-				const Position home = me->GetHomePosition();
-				me->NearTeleportTo(home.GetPositionX(), home.GetPositionY(), home.GetPositionZ(), home.GetOrientation());
-				me->RemoveAllAttackers();
-				player->RemoveAllAttackers();
-				me->getThreatManager().clearReferences();
-				player->getThreatManager().clearReferences();
-				me->AttackStop();
-				me->CombatStop();
-				player->AttackStop();
-				player->CombatStop();
-				me->ClearInCombat();
-				player->ClearInCombat();
-				me->ResetPlayerDamageReq();
-				me->SetLastDamagedTime(0);
-				me->RemoveAllAurasExceptType(SPELL_AURA_CONTROL_VEHICLE, SPELL_AURA_CLONE_CASTER, 710000, 700000);
-				zone = 0;
-				player->RemoveAura(T_AURA_NO_HEAL);
+				player->ToPlayer()->AddItem(775500, 1);
+				player->ToPlayer()->AddItem(775501, 1);
 			}
+			me->Respawn(true);
+			zone = 0;
+			if (player)
+			{
+				player->RemoveAura(T_AURA_NO_HEAL);
+				player = NULL;
+			}
+			me->NearTeleportTo(zones[zone]->m_positionX, zones[zone]->m_positionY, zones[zone]->m_positionZ, zones[zone]->GetOrientation());
+			_EnterEvadeMode();
 		}
 
 		void EnterEvadeMode() override
 		{
 			_EnterEvadeMode();
 			if (player)
+			{
 				player->RemoveAura(T_AURA_NO_HEAL);
+				player = NULL;
+			}
 		}
 
 		void UpdateAI(uint32 diff) override
 		{
 			if (!UpdateVictim())
+			{
+				player = NULL;
 				return;
+			}
 
 			events.Update(diff);
 
@@ -2747,7 +2790,7 @@ public:
 		//Переменные
 	private:
 		EventMap events;
-		Unit* player;
+		Player* player;
 		uint8 zone;
 		std::vector<Position*> zones;
 	};
@@ -2788,6 +2831,7 @@ enum t3_spells
 	TTHREE_AURA_PACIFI = 700091,
 	TTHREE_AURA_FIRE,
 	TTHREE_AURA_INVINSIBLE,
+	TTHREE_AURA_NORMAL_SPEED = 700099,
 };
 
 class boss_t3_fire : public CreatureScript
@@ -2823,10 +2867,8 @@ public:
 				player = me->SelectNearestPlayer(30);
 				me->AddAura(TTHREE_AURA_FIRE, me);
 				me->AddAura(TTHREE_AURA_PACIFI, player);
+				me->AddAura(TTHREE_AURA_NORMAL_SPEED, player);
 				me->SetInCombatWith(player);
-				player->SetInCombatWith(me);
-				player_speed_rate = player->GetSpeedRate(MOVE_RUN);
-				player->SetSpeed(MOVE_RUN, 1, true);
 				player->SetDisplayId(252);
 				break;
 			case TTHREE_ACTION_STOP_EVENT:
@@ -2840,7 +2882,7 @@ public:
 				me->ClearInCombat();
 				player->ClearInCombat();
 				player->RemoveAura(TTHREE_AURA_PACIFI);
-				player->SetSpeed(MOVE_RUN, player_speed_rate, true);
+				player->RemoveAura(TTHREE_AURA_NORMAL_SPEED);
 				me->RemoveAura(TTHREE_AURA_FIRE);
 				player->DeMorph();
 				RemoveAllZombie();
@@ -2937,7 +2979,6 @@ public:
 		EventMap events;
 		Player* player;
 		uint8 z_counter, counter, zone;
-		float player_speed_rate;
 	};
 
 	bool OnGossipHello(Player* player, Creature* creature) override
@@ -2982,4 +3023,5 @@ void AddSC_npcs_special()
 	new npc_enchanter();
 	new boss_t2_crystal();
 	new boss_t3_fire();
+	new teleport_master();
 }

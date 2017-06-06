@@ -50,10 +50,10 @@
 const uint32 FORBIDDEN_TALENTS_IN_1V1_ARENA[] =
 {
 	// Healer
-	//201, // PriestDiscipline
-	//202, // PriestHoly
-	//382, // PaladinHoly
-	//262, // ShamanRestoration
+	201, // PriestDiscipline
+	202, // PriestHoly
+	382, // PaladinHoly
+	262, // ShamanRestoration
 	282, // DruidRestoration
 
 	// Tanks

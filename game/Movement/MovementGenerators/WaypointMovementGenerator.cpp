@@ -212,7 +212,7 @@ bool WaypointMovementGenerator<Creature>::DoUpdate(Creature* creature, uint32 di
         if (!creature->HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT) || !creature->GetTransGUID())
             creature->SetHomePosition(creature->GetPosition());
 
-        if (creature->IsStopped())
+        if (!creature->HasUnitState(UNIT_STATE_MOVING))
             Stop(STOP_TIME_FOR_PLAYER);
         else if (creature->movespline->Finalized())
         {

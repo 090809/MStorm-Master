@@ -45,6 +45,8 @@ enum DruidSpells
     SPELL_DRUID_SAVAGE_ROAR                 = 62071,
     SPELL_DRUID_TIGER_S_FURY_ENERGIZE       = 51178,
     SPELL_DRUID_ITEM_T8_BALANCE_RELIC       = 64950,
+
+	SPELL_DRUID_AGI_TO_STR					= 200841,
 };
 
 // -1850 - Dash
@@ -1157,6 +1159,47 @@ public:
 	}
 };
 
+class spell_dru_bear : public SpellScriptLoader
+{
+public:
+	spell_dru_bear() : SpellScriptLoader("spell_dru_bear") { }
+
+	class spell_dru_bear_AuraScript : public AuraScript
+	{
+		PrepareAuraScript(spell_dru_bear_AuraScript);
+
+		bool Validate(SpellInfo const* /*spell*/) override
+		{
+			if (!sSpellMgr->GetSpellInfo(SPELL_DRUID_AGI_TO_STR))
+				return false;
+			return true;
+		}
+
+		void AfterApply(AuraEffect const* aurEff, AuraEffectHandleModes /*mode*/)
+		{
+			Unit* target = GetTarget();
+			int32 bp0 = CalculatePct(target->GetStat(STAT_AGILITY), aurEff->GetAmount());
+			target->CastCustomSpell(target, SPELL_DRUID_AGI_TO_STR, &bp0, NULL, NULL, true);
+		}
+
+		void AfterRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+		{
+			GetTarget()->RemoveAurasDueToSpell(SPELL_DRUID_AGI_TO_STR);
+		}
+
+		void Register() override
+		{
+			AfterEffectApply += AuraEffectApplyFn(spell_dru_bear_AuraScript::AfterApply, EFFECT_2, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_CHANGE_AMOUNT_MASK);
+			AfterEffectRemove += AuraEffectRemoveFn(spell_dru_bear_AuraScript::AfterRemove, EFFECT_2, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_CHANGE_AMOUNT_MASK);
+		}
+	};
+
+	AuraScript* GetAuraScript() const override
+	{
+		return new spell_dru_bear_AuraScript();
+	}
+};
+
 void AddSC_druid_spell_scripts()
 {
     new spell_dru_dash();
@@ -1186,4 +1229,5 @@ void AddSC_druid_spell_scripts()
 
 	new spell_dru_sov_rage();
 	new spell_dru_nature_regenate();
+	new spell_dru_bear();
 }

@@ -3000,6 +3000,9 @@ void SpellMgr::LoadSpellInfoCorrections()
             case 31344: // Howl of Azgalor
                 spellInfo->Effects[EFFECT_0].RadiusEntry = sSpellRadiusStore.LookupEntry(EFFECT_RADIUS_100_YARDS); // 100yards instead of 50000?!
                 break;
+            case 49575: // Death Grip 
+                spellInfo->Effects[EFFECT_0].MiscValue = 20; 
+				break; 
             case 42818: // Headless Horseman - Wisp Flight Port
             case 42821: // Headless Horseman - Wisp Flight Missile
                 spellInfo->RangeEntry = sSpellRangeStore.LookupEntry(6); // 100 yards

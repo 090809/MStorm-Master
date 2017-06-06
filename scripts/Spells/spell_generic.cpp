@@ -1609,6 +1609,7 @@ class spell_gen_gift_of_naaru : public SpellScriptLoader
                     case SPELLFAMILY_WARRIOR:
                     case SPELLFAMILY_HUNTER:
                     case SPELLFAMILY_DEATHKNIGHT:
+					case SPELLFAMILY_REAPER:
                         heal = 1.1f * float(std::max(GetCaster()->GetTotalAttackPowerValue(BASE_ATTACK), GetCaster()->GetTotalAttackPowerValue(RANGED_ATTACK)));
                         break;
                     case SPELLFAMILY_GENERIC:
@@ -1858,7 +1859,23 @@ enum Mounts
     // X-53 Touring Rocket
     SPELL_X53_TOURING_ROCKET_150        = 75957,
     SPELL_X53_TOURING_ROCKET_280        = 75972,
-    SPELL_X53_TOURING_ROCKET_310        = 76154
+    SPELL_X53_TOURING_ROCKET_310        = 76154,
+
+	//Raven
+	SPELL_RAVEN_100						= 101120,
+	SPELL_RAVEN_310,
+
+	//Runeclick
+	SPELL_RUNECLICK_100					= 101123,
+	SPELL_RUNECLICK_310,
+	
+	//Hourse of fobos
+	SPELL_HOF_100						= 101126,
+	SPELL_HOF_310,
+	
+	//Azart
+	SPELL_AZART_100						= 101129,
+	SPELL_AZART_310,
 };
 
 class spell_gen_mount : public SpellScriptLoader
@@ -1947,7 +1964,7 @@ class spell_gen_mount : public SpellScriptLoader
 						if (target->GetBaseSkillValue(SKILL_RIDING) > 300) {
 							if (canFly)
 							{
-								if (_mount310 && target->Has310Flyer(false))
+								if (_mount310)
 									mount = _mount310;
 								else
 									mount = _mount280;
@@ -4141,6 +4158,37 @@ public:
 		return new spell_creature_blood_SpellScript();
 	}
 };
+
+class spell_gen_disgrace : public SpellScriptLoader
+{
+public:
+	spell_gen_disgrace() : SpellScriptLoader("spell_gen_disgrace") { }
+
+	class spell_gen_disgrace_AuraScript : public AuraScript
+	{
+		PrepareAuraScript(spell_gen_disgrace_AuraScript);
+
+		void OnProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
+		{
+			if (Player* player = eventInfo.GetActor()->ToPlayer())
+			{
+				if (!(player->InArena() || player->InBattleground()))
+					player->RemoveArenaSpellCooldowns(true);
+			}
+		}
+
+		void Register() override
+		{
+			OnEffectProc += AuraEffectProcFn(spell_gen_disgrace_AuraScript::OnProc, EFFECT_0, SPELL_AURA_DUMMY);
+		}
+	};
+
+	AuraScript* GetAuraScript() const override
+	{
+		return new spell_gen_disgrace_AuraScript();
+	}
+};
+
 void AddSC_generic_spell_scripts()
 {
     new spell_gen_absorb0_hitlimit1();
@@ -4192,7 +4240,11 @@ void AddSC_generic_spell_scripts()
     new spell_gen_mount("spell_blazing_hippogryph", 0, 0, 0, SPELL_BLAZING_HIPPOGRYPH_150, SPELL_BLAZING_HIPPOGRYPH_280);
     new spell_gen_mount("spell_celestial_steed", 0, SPELL_CELESTIAL_STEED_60, SPELL_CELESTIAL_STEED_100, SPELL_CELESTIAL_STEED_150, SPELL_CELESTIAL_STEED_280, SPELL_CELESTIAL_STEED_310);
     new spell_gen_mount("spell_x53_touring_rocket", 0, 0, 0, SPELL_X53_TOURING_ROCKET_150, SPELL_X53_TOURING_ROCKET_280, SPELL_X53_TOURING_ROCKET_310);
-    new spell_gen_mounted_charge();
+	new spell_gen_mount("spell_mount_raven", 0, 0, SPELL_RAVEN_100, 0, 0, SPELL_RAVEN_310);
+	new spell_gen_mount("spell_mount_runeclick", 0, 0, SPELL_RUNECLICK_100, 0, 0, SPELL_RUNECLICK_310);
+	new spell_gen_mount("spell_mount_hourse_of_fobos", 0, 0, SPELL_HOF_100, 0, 0, SPELL_HOF_310);
+	new spell_gen_mount("spell_mount_azart", 0, 0, SPELL_AZART_100, 0, 0, SPELL_AZART_310);
+	new spell_gen_mounted_charge();
     new spell_gen_netherbloom();
     new spell_gen_nightmare_vine();
     new spell_gen_obsidian_armor();
@@ -4226,4 +4278,5 @@ void AddSC_generic_spell_scripts()
     new spell_gen_stand();
     new spell_gen_mixology_bonus();
 	new spell_creature_blood();
+	new spell_gen_disgrace();
 }
