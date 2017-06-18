@@ -1142,7 +1142,7 @@ bool Guardian::UpdateStats(Stats stat)
 			//DK Ghoul
 			if (IsPetGhoul())
 			{
-				mod = 0.5f;
+				mod = 0.4f;
 				AuraEffect const* aurEff = owner->GetAuraEffect(SPELL_AURA_MOD_TOTAL_STAT_PERCENTAGE, SPELLFAMILY_DEATHKNIGHT, 3010, 0);
 				if (aurEff)
 				{
@@ -1151,7 +1151,7 @@ bool Guardian::UpdateStats(Stats stat)
 				}
 				aurEff = owner->GetAuraEffect(58686, 0);
 				if (aurEff)
-					mod += CalculatePct(1.0f, aurEff->GetAmount());                                                    // Glyph of the Ghoul adds a flat value to the scale mod
+					mod += CalculatePct(0.65f, aurEff->GetAmount());                                                    // Glyph of the Ghoul adds a flat value to the scale mod
 				ownersBonus = float(owner->GetStat(stat)) * mod;
 			}
 			//Warlock Pets
@@ -1177,13 +1177,13 @@ bool Guardian::UpdateStats(Stats stat)
 			//DK Ebon Gargoyle
 			if (GetEntry() == 27829)
 			{
-				mod = 0.4f;
+				mod = 0.36f;
 				ownersBonus = owner->GetStat(stat) * mod;
 			}
 			//Others
 			if (ownersBonus == 0)
 			{
-				mod = 0.7f;
+				mod = 0.52f;
 				ownersBonus = owner->GetStat(stat) * mod;
 			}
 		}
@@ -1192,7 +1192,7 @@ bool Guardian::UpdateStats(Stats stat)
 		{	
 			if (IsPetGhoul())
 			{
-				mod = 0.5f;
+				mod = 0.4f;
 				AuraEffect const* aurEff = owner->GetAuraEffect(SPELL_AURA_MOD_TOTAL_STAT_PERCENTAGE, SPELLFAMILY_DEATHKNIGHT, 3010, 0);
 				if (aurEff)
 				{
@@ -1202,7 +1202,7 @@ bool Guardian::UpdateStats(Stats stat)
 				// Glyph of the Ghoul
 				aurEff = owner->GetAuraEffect(58686, 0);
 				if (aurEff)
-					mod += CalculatePct(1.0f, aurEff->GetAmount());                                                    // Glyph of the Ghoul adds a flat value to the scale mod
+					mod += CalculatePct(0.65f, aurEff->GetAmount());                                                    // Glyph of the Ghoul adds a flat value to the scale mod
 				ownersBonus = float(owner->GetStat(stat)) * mod;
 			}
 

@@ -676,7 +676,12 @@ uint32 Unit::DealDamage(Unit* victim, uint32 damage, CleanDamage const* cleanDam
     TC_LOG_DEBUG("entities.unit", "DealDamageStart");
 
     uint32 health = victim->GetHealth();
-    TC_LOG_DEBUG("entities.unit", "%s dealt %u damage to %s", GetGUID().ToString().c_str(), damage, victim->GetGUID().ToString().c_str());
+
+	if (IsCharmedOwnedByPlayerOrPlayer() 
+		&& (GetCharmerOrOwnerPlayerOrPlayerItself()->InBattleground() || GetCharmerOrOwnerPlayerOrPlayerItself()->InArena()))
+		damage *= 0.9f;
+	
+	TC_LOG_DEBUG("entities.unit", "%s dealt %u damage to %s", GetGUID().ToString().c_str(), damage, victim->GetGUID().ToString().c_str());
 
     // duel ends when player has 1 or less hp
     bool duel_hasEnded = false;
@@ -3904,6 +3909,12 @@ void Unit::RemoveAurasDueToItemSpell(uint32 spellId, ObjectGuid castItemGuid)
         if (iter->second->GetBase()->GetCastItemGUID() == castItemGuid)
         {
             RemoveAura(iter);
+			if (const SpellInfo* _spellEntry = sSpellMgr->GetSpellInfo(spellId))
+				if (GetTypeId() == TYPEID_PLAYER)
+					for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)                  // search through the SpellInfo for valid trigger spells
+						if (_spellEntry->Effects[i].TriggerSpell > 0 && _spellEntry->Effects[i].Effect == SPELL_EFFECT_LEARN_SPELL)
+							ToPlayer()->RemoveSpell(_spellEntry->Effects[i].TriggerSpell, true); // and remove any spells that the talent teaches
+
             iter = m_appliedAuras.lower_bound(spellId);
         }
         else

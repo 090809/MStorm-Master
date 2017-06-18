@@ -353,6 +353,7 @@ class Item : public Object
         void BuildUpdate(UpdateDataMapType&) override;
 
         uint32 GetScriptId() const { return GetTemplate()->ScriptId; }
+		bool HasSavedEntry() { return m_savedEntry > 0; }
     private:
         std::string m_text;
         uint8 m_slot;

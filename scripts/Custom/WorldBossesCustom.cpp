@@ -552,15 +552,30 @@ enum PyromaniacEnum
 	EVENT_FIRE_ARMOR_PROC,
 	EVENT_SPELL_FIRE_BOMB,
 
-	SPELL_BIGFIREBOLT = 700100,
+	EVENT_SPELL_SUN_SEED,
+	EVENT_FIRE_UP,
+	EVENT_SPELL_BIGFIREBOLT_3,
+	EVENT_SPELL_SCORGE_3,
+
+	SPELL_BIGFIREBOLT = 700101,
 	SPELL_SCORGE,
+
 	SPELL_FIRE_CHARGE,
 	SPELL_FIRE_CHARGE_AURA,
+
 	SPELL_FIRE_AREA_PROC,
+
 	SPELL_FIRE_ARMOR,
 	SPELL_FIRE_ARMOR_PROC,
-	SPELL_FIRE_BOMB,
-	SPELL_FIRE_SEED,
+	
+	//3-€ фаза
+	SPELL_SUN_SEED,
+	SPELL_FIRE_UP,
+	SPELL_FIRE_UP_ACTIVE,
+	SPELL_FIRE_AURA,
+	SPELL_FIRE_HARMS = 68161,
+
+	SPELL_AURA_LESS_DAMAGE_2 = 710002
 };
 
 class WorldBoss_Pyromaniac : public CreatureScript
@@ -579,21 +594,37 @@ public:
 		{
 			if (!me->HasAura(SPELL_AURA_LESS_DAMAGE))
 				me->AddAura(SPELL_AURA_LESS_DAMAGE, me);
+			if (!me->HasAura(SPELL_AURA_LESS_DAMAGE_2))
+				me->AddAura(SPELL_AURA_LESS_DAMAGE_2, me);
+			me->DeMorph();
+			me->RemoveAura(SPELL_FIRE_ARMOR);
+			me->RemoveAura(SPELL_FIRE_AURA);
+			me->RemoveAura(SPELL_FIRE_HARMS);
+			DoCast(52993);
 			events.SetPhase(0);
 		};
+		
+		void JustReachedHome() override {
+			DoCast(52993);
+			me->DeMorph();
+		}
 
 		void JustDied(Unit* /*killer*/) override {
 			_JustDied();
+			me->DeMorph();
 		}
 
 		void EnterCombat(Unit* /*who*/) override
 		{
+			me->CastStop();
 			_EnterCombat();
 			if (!me->HasAura(SPELL_AURA_LESS_DAMAGE))
 				me->AddAura(SPELL_AURA_LESS_DAMAGE, me);
+			if (!me->HasAura(SPELL_AURA_LESS_DAMAGE_2))
+				me->AddAura(SPELL_AURA_LESS_DAMAGE_2, me);
 			events.SetPhase(1);
-			events.ScheduleEvent(EVENT_SPELL_BIGFIREBOLT, urand(4000, 6000), 0, 1);
-			events.ScheduleEvent(EVENT_SPELL_SCORGE, urand(3500, 5000), 0, 1);
+			events.ScheduleEvent(EVENT_SPELL_BIGFIREBOLT, urand(7000, 10000), 0, 1);
+			events.ScheduleEvent(EVENT_SPELL_SCORGE, urand(5500, 7000), 0, 1);
 			events.ScheduleEvent(EVENT_FIRE_CHARGE, 18000, 0, 1);
 			events.ScheduleEvent(EVENT_PHASE_2, 200000, 0, 1);
 		}
@@ -604,12 +635,34 @@ public:
 			switch (phaseId)
 			{
 			case 2:
-				events.ScheduleEvent(EVENT_SPELL_BIGFIREBOLT_2, urand(4000, 6000), 0, 2);
+				events.CancelEvent(EVENT_SPELL_BIGFIREBOLT);
+				events.CancelEvent(EVENT_SPELL_SCORGE);
+				events.CancelEvent(EVENT_FIRE_CHARGE);
+				events.CancelEvent(EVENT_PHASE_2);
+
+				events.ScheduleEvent(EVENT_SPELL_BIGFIREBOLT_2, urand(5000, 8000), 0, 2);
 				events.ScheduleEvent(EVENT_SPELL_SCORGE_2, urand(3500, 5000), 0, 2);
 				events.ScheduleEvent(EVENT_FIRE_ARMOR_PROC, 3000, 0, 2);
 				phase_2_health = me->GetHealthPct();
 				
 				DoCast(SPELL_FIRE_ARMOR); //Visual
+				break;
+			case 3:
+				me->SetDisplayId(1204); //Ёлементаль ќгн€
+
+				DoCast(SPELL_FIRE_AURA);
+				DoCast(SPELL_FIRE_HARMS);
+
+				events.CancelEvent(EVENT_SPELL_BIGFIREBOLT_2);
+				events.CancelEvent(EVENT_SPELL_SCORGE_2);
+				
+				events.RescheduleEvent(EVENT_FIRE_ARMOR_PROC, 3000, 0, 3);
+
+				events.ScheduleEvent(EVENT_SPELL_SUN_SEED, urand(8000, 12000), 0, 3);
+				events.ScheduleEvent(EVENT_FIRE_UP, urand(0, 1000), 0, 3);
+				events.ScheduleEvent(EVENT_SPELL_BIGFIREBOLT_3, urand(3000, 6000), 0, 3);
+				events.ScheduleEvent(EVENT_SPELL_SCORGE_3, urand(3500, 4500), 0, 3);
+
 				break;
 			}
 		}
@@ -620,34 +673,37 @@ public:
 			{
 			case EVENT_SPELL_BIGFIREBOLT:
 				DoCast(SPELL_BIGFIREBOLT);
-				events.ScheduleEvent(EVENT_SPELL_BIGFIREBOLT, urand(6000, 9000), 0, 1);
+				events.ScheduleEvent(EVENT_SPELL_BIGFIREBOLT, urand(7000, 10000), 0, 1);
 				break;
 			case EVENT_SPELL_SCORGE:
 				DoCast(SPELL_SCORGE);
-				events.ScheduleEvent(EVENT_SPELL_SCORGE, urand(3500, 5000), 0, 1);
+				events.ScheduleEvent(EVENT_SPELL_SCORGE, urand(5500, 7000), 0, 1);
 				break;
 			case EVENT_FIRE_CHARGE:
 				DoCast(SPELL_FIRE_CHARGE);
+				me->AddAura(SPELL_FIRE_CHARGE_AURA, me);
+				if (me->GetAuraCount(SPELL_FIRE_CHARGE_AURA) > 9)
+					SetPhase(2);
 				events.ScheduleEvent(EVENT_FIRE_CHARGE, 18000, 0, 1);
 				break;
 			case EVENT_PHASE_2:
 				SetPhase(2);
 				break;
-
 			case EVENT_SPELL_BIGFIREBOLT_2:
 			{
-				Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO, 0);
-				DoCast(target, SPELL_BIGFIREBOLT);
-				DoCast(target, SPELL_FIRE_AREA_PROC, true);
+				//Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO, 0);
+				DoCastVictim(SPELL_BIGFIREBOLT);
+				DoCastVictim(SPELL_FIRE_AREA_PROC, true);
 				events.ScheduleEvent(EVENT_SPELL_BIGFIREBOLT_2, urand(6000, 9000), 0, 2);
 				break;
 			}
 			case EVENT_SPELL_SCORGE_2:
 			{	
-				Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO, 0);
-				DoCast(target, SPELL_SCORGE);
-				DoCast(target, SPELL_FIRE_AREA_PROC, true);
-				events.ScheduleEvent(EVENT_SPELL_SCORGE_2, urand(3500, 5000), 0, 2);
+				//Unit* target = 
+				//Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO, 0);
+				DoCastVictim(SPELL_SCORGE);
+				DoCastVictim(SPELL_FIRE_AREA_PROC, true);
+				events.ScheduleEvent(EVENT_SPELL_SCORGE_2, urand(4500, 6000), 0, 2);
 				break;
 			}
 			case EVENT_FIRE_ARMOR_PROC:
@@ -660,36 +716,63 @@ public:
 						if ((*iter)->IsAlive() && !(*iter)->IsGameMaster())
 						{
 							float value = me->GetDistance((*iter)->GetPosition());
-							uint32 st_damage = 18500000;
-							const int32 _value = value > 50 ? 0 :
-								value < 10 ? st_damage :
-								st_damage / 40 * (50 - value);
+							uint32 st_damage;
+
+							if (events.IsInPhase(2))
+								st_damage  = 15000000;
+							else st_damage = 20000000;
+
+							value = value > 50 ? 50 : value;
+							float percent = (value / 50);
+							percent = percent < 0.3f ? 0.3f : percent;
+							
+							const int32 _value = st_damage * percent;
+							//const int32 _value = value > 50 ? 0 :
+							//	value < 10 ? st_damage :
+							//	st_damage / 40 * (50 - value);
 							me->CastCustomSpell((*iter), (uint32)SPELL_FIRE_ARMOR_PROC, &_value, NULL, NULL, true);
 						}
-					events.ScheduleEvent(EVENT_FIRE_ARMOR_PROC, 3000, 0, 2);
+					if (events.IsInPhase(2))
+						events.ScheduleEvent(EVENT_FIRE_ARMOR_PROC, 3000, 0, 2);
+					else 
+						events.ScheduleEvent(EVENT_FIRE_ARMOR_PROC, 3000, 0, 3);
 				}
 				break;
-			case EVENT_SPELL_FIRE_BOMB:
-				DoCast(SelectTarget(SELECT_TARGET_RANDOM, 0), SPELL_FIRE_BOMB);
+
+			case EVENT_SPELL_BIGFIREBOLT_3:
+			{
+				//Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO, 0);
+				DoCastVictim(SPELL_BIGFIREBOLT);
+				DoCastVictim(SPELL_FIRE_AREA_PROC, true);
+				events.ScheduleEvent(EVENT_SPELL_BIGFIREBOLT_3, urand(3000, 6000), 0, 3);
 				break;
 			}
-		}
-
-		void SpellHit(Unit* caster, SpellInfo const* spell) override 
-		{ 
-			if (caster != me)
-				return;
-			if (spell->Id == SPELL_FIRE_CHARGE)
+			case EVENT_SPELL_SCORGE_3:
 			{
-				me->AddAura(SPELL_FIRE_CHARGE_AURA, me);
-
-				if (me->GetAuraCount(SPELL_FIRE_CHARGE_AURA) > 9)
-					SetPhase(2);
+				//Unit* target = SelectTarget(SELECT_TARGET_TOPAGGRO, 0);
+				DoCastVictim(SPELL_SCORGE);
+				DoCastVictim(SPELL_FIRE_AREA_PROC, true);
+				events.ScheduleEvent(EVENT_SPELL_SCORGE_3, urand(1500, 5000), 0, 3);
+				break;
+			}
+			case EVENT_SPELL_SUN_SEED:
+			{
+				//Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0);
+				DoCastVictim(SPELL_SUN_SEED);
+				events.ScheduleEvent(EVENT_SPELL_SUN_SEED, urand(6000, 12000), 0, 3);
+				break;
+			}
+			case EVENT_FIRE_UP:
+				DoCast(SPELL_FIRE_UP);
+				events.ScheduleEvent(EVENT_FIRE_UP, urand(14000, 17000), 0, 3);
+				break;
 			}
 		}
 
 		void DamageTaken(Unit* /*done_by*/, uint32& damage) override
 		{
+			if (events.IsInPhase(1) && HealthBelowPct(60))
+				SetPhase(2);
 			if (events.IsInPhase(2) && HealthBelowPct(phase_2_health / 2))
 				SetPhase(3);
 		}

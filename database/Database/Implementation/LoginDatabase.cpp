@@ -113,6 +113,6 @@ void LoginDatabaseConnection::DoPrepareStatements()
     PrepareStatement(LOGIN_DEL_RBAC_ACCOUNT_PERMISSION, "DELETE FROM rbac_account_permissions WHERE accountId = ? AND permissionId = ? AND (realmId = ? OR realmId = -1)", CONNECTION_ASYNC);
     PrepareStatement(LOGIN_INS_ACCOUNT_MUTE, "INSERT INTO account_muted VALUES (?, UNIX_TIMESTAMP(), ?, ?, ?)", CONNECTION_ASYNC);
     PrepareStatement(LOGIN_SEL_ACCOUNT_MUTE_INFO, "SELECT mutedate, mutetime, mutereason, mutedby FROM account_muted WHERE guid = ? ORDER BY mutedate ASC", CONNECTION_SYNCH);
-	PrepareStatement(LOGIN_SEL_VIP, "SELECT time_to FROM vip WHERE account_id = ? AND ( all_account = 1 OR character_id = ? ) AND UNIX_TIMESTAMP() < time_to", CONNECTION_SYNCH);
-	PrepareStatement(LOGIN_INS_VIP, "INSERT INTO vip ( `account_id`, `all_account`, `character_id`, `time_to` ) VALUES (?, ?, ?, ?)", CONNECTION_SYNCH);
+	PrepareStatement(LOGIN_SEL_VIP, "SELECT UNIX_TIMESTAMP(time_to) FROM vip WHERE account_id = ? AND ( all_account = 1 OR character_id = ? ) AND UNIX_TIMESTAMP() < UNIX_TIMESTAMP(time_to)", CONNECTION_SYNCH);
+	PrepareStatement(LOGIN_INS_VIP, "INSERT INTO vip ( `account_id`, `all_account`, `character_id`, `time_to` ) VALUES (?, ?, ?, FROM_UNIXTIME(?))", CONNECTION_SYNCH);
 }

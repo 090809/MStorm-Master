@@ -57,7 +57,7 @@ void FleeingMovementGenerator<T>::_setTargetLocation(T* owner)
     }
 
     PathGenerator path(owner);
-    path.SetPathLengthLimit(30.0f);
+    path.SetPathLengthLimit(20.0f);
     bool result = path.CalculatePath(x, y, z);
     if (!result || (path.GetPathType() & PATHFIND_NOPATH))
     {
@@ -121,6 +121,13 @@ void FleeingMovementGenerator<T>::DoInitialize(T* owner)
 
     owner->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_FLEEING);
     owner->AddUnitState(UNIT_STATE_FLEEING | UNIT_STATE_FLEEING_MOVE);
+
+	if (owner->HasUnitMovementFlag(MOVEMENTFLAG_MASK_MOVING))
+    {
+        owner->StopMoving();
+        i_nextCheckTime.Reset(200);
+        return;
+    }
 
     _setTargetLocation(owner);
 }

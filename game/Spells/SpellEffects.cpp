@@ -639,7 +639,7 @@ void Spell::EffectSchoolDMG(SpellEffIndex effIndex)
 				if (m_spellInfo->Id == 35395)
 				{
 					if (m_caster->GetHealthPct() > unitTarget->GetHealthPct() && m_caster->HasAura(600000))
-						damage *= 1.4f;
+						damage *= 1.2f;
 					break;
 				}
                 break;

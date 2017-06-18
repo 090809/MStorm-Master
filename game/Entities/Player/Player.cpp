@@ -12949,6 +12949,9 @@ void Player::RemoveBGItems()
 	for (uint8 i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; i++)
 		if (Item* pItem = GetItemByPos(INVENTORY_SLOT_BAG_0, i))
 		{
+			if (!pItem->HasSavedEntry())
+				continue;
+
 			if (pItem->IsEquipped())
 				_ApplyItemMods(pItem, i, false);
 			pItem->RemoveSavedEntry();
@@ -12960,6 +12963,9 @@ void Player::RemoveBGItems()
 	for (uint8 i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
 		if (Item* pItem = GetItemByPos(INVENTORY_SLOT_BAG_0, i))
 		{
+			if (!pItem->HasSavedEntry())
+				continue;
+
 			if (pItem->IsEquipped())
 				_ApplyItemMods(pItem, i, false);
 			pItem->RemoveSavedEntry();
@@ -12974,6 +12980,9 @@ void Player::RemoveBGItems()
 			for (uint32 j = 0; j < pBag->GetBagSize(); j++)
 				if (Item* pItem = pBag->GetItemByPos(j))
 				{
+					if (!pItem->HasSavedEntry())
+						continue;
+
 					if (pItem->IsEquipped())
 						_ApplyItemMods(pItem, i, false);
 					pItem->RemoveSavedEntry();
@@ -12986,6 +12995,9 @@ void Player::RemoveBGItems()
 	for (uint8 i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_BAG_END; i++)
 		if (Item* pItem = GetItemByPos(INVENTORY_SLOT_BAG_0, i))
 		{
+			if (!pItem->HasSavedEntry())
+				continue;
+
 			if (pItem->IsEquipped())
 				_ApplyItemMods(pItem, i, false);
 			
@@ -18248,7 +18260,7 @@ Item* Player::_LoadItem(SQLTransaction& trans, uint32 zoneId, uint32 timeDiff, F
         item = NewItemOrBag(proto);
         if (item->LoadFromDB(itemGuid, GetGUID(), fields, itemEntry))
         {
-			if (!GetMap()->IsBattlegroundOrArena())
+			if (!GetMap()->IsBattlegroundOrArena() && item->HasSavedEntry())
 				item->RemoveSavedEntry(m_savedEntry);
             PreparedStatement* stmt = NULL;
 
